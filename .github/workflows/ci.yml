@@ -60,7 +60,7 @@ jobs:
       GMS_AGENT_TEST: "1"
     defaults:
       run:
-        shell: bash
+        shell: pwsh
 
     steps:
       - name: Checkout
@@ -77,20 +77,19 @@ jobs:
 
       - name: Verify Ollama is reachable
         run: |
-          if ! curl -fsS "${OLLAMA_HOST}/api/tags" > /dev/null 2>&1; then
-            echo "::error::Ollama is not running at ${OLLAMA_HOST}. Start it before the runner picks up jobs."
+          try { $null = Invoke-RestMethod "$env:OLLAMA_HOST/api/tags" } catch {
+            Write-Error "Ollama is not running at $env:OLLAMA_HOST. Start it before the runner picks up jobs."
             exit 1
-          fi
-          echo "Ollama is reachable"
-          ollama list || true
+          }
+          Write-Host "Ollama is reachable"
 
       - name: Verify Qdrant is reachable
         run: |
-          if ! curl -fsS "${QDRANT_URL}/readyz" > /dev/null 2>&1; then
-            echo "::error::Qdrant is not running at ${QDRANT_URL}. Start it before the runner picks up jobs."
+          try { $null = Invoke-RestMethod "$env:QDRANT_URL/readyz" } catch {
+            Write-Error "Qdrant is not running at $env:QDRANT_URL. Start it before the runner picks up jobs."
             exit 1
-          fi
-          echo "Qdrant is reachable"
+          }
+          Write-Host "Qdrant is reachable"
 
       - name: Typecheck
         run: npm run typecheck
