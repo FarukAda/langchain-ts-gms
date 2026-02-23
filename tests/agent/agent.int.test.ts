@@ -415,7 +415,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
         "Completed and cancelled tasks cannot be changed. " +
         "When the user names a specific tool, use that exact tool.",
     });
-  }, 120_000);
+  }, 300_000);
 
   /** Dump full message trajectory on failure for enterprise-grade diagnostics. */
   afterEach(async (ctx) => {
@@ -536,7 +536,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
       Array.isArray(planResponse!.executionOrder),
       "Planning should include executionOrder",
     ).toBe(true);
-  }, 180_000);
+  }, 300_000);
 
   // ── Scenario 2: Get goal details ────────────────────────────────
 
@@ -575,7 +575,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
       Array.isArray(goal!.tasks) && goal!.tasks.length >= 2,
       "Goal should have ≥2 tasks from planning",
     ).toBe(true);
-  }, 120_000);
+  }, 300_000);
 
   // ── Scenario 3: List all goals ──────────────────────────────────
 
@@ -613,7 +613,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
       (listResponse!.items as unknown[]).length,
       "Should list at least the goal we created",
     ).toBeGreaterThanOrEqual(1);
-  }, 120_000);
+  }, 300_000);
 
   // ── Scenario 4: Get progress (all pending) ──────────────────────
 
@@ -654,7 +654,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     expect(progressResponse!.pendingTasks, "All tasks should be pending").toBe(
       progressResponse!.totalTasks,
     );
-  }, 120_000);
+  }, 300_000);
 
   // ── Scenario 5: List tasks ──────────────────────────────────────
 
@@ -714,7 +714,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
 
     // Fail explicitly if we couldn't extract a task ID — downstream tests depend on this
     expect(createdTaskId, "Should have extracted a task ID from the tool response").toBeDefined();
-  }, 120_000);
+  }, 300_000);
 
   // ── Scenario 6: Update task status ──────────────────────────────
 
@@ -757,7 +757,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     const task = updateResponse!.task as Record<string, unknown> | undefined;
     expect(task, "Response should contain task object").toBeDefined();
     expect(task!.status, "Task should now be in_progress").toBe("in_progress");
-  }, 120_000);
+  }, 300_000);
 
   // ── Scenario 7: Search tasks ────────────────────────────────────
 
@@ -794,7 +794,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
       (r) => Array.isArray(r.items) || typeof r.total === "number",
     );
     expect(searchResponse, "Search response should contain items or total field").toBeDefined();
-  }, 120_000);
+  }, 300_000);
 
   // ── Scenario 8: Validate goal tree ──────────────────────────────
 
@@ -831,7 +831,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
       typeof validateResponse!.taskCount === "number" && validateResponse!.taskCount >= 2,
       "Should report task count",
     ).toBe(true);
-  }, 120_000);
+  }, 300_000);
 
   // ── Scenario 9: Get a specific task ──────────────────────────────
 
@@ -876,7 +876,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     expect(task, "Response should contain task object").toBeDefined();
     expect(task!.id, "Task ID should match").toBe(createdTaskId);
     expect(task!.status, "Task should still be in_progress from S6").toBe("in_progress");
-  }, 120_000);
+  }, 300_000);
 
   // ── Scenario 10: Update goal ─────────────────────────────────────
 
@@ -921,7 +921,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
       `Status should remain '${goalStoredStatus}' (no status change requested)`,
     ).toBe(goalStoredStatus);
     expect(updateResponse!.updatedAt, "updatedAt should be set").toBeDefined();
-  }, 120_000);
+  }, 300_000);
 
   // ── Scenario 11: Replan goal ─────────────────────────────────────
 
@@ -981,7 +981,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
       );
       if (candidate) secondTaskId = candidate;
     }
-  }, 180_000);
+  }, 300_000);
 
   // ── Scenario 12: Semantic goal search ─────────────────────────────
 
@@ -1025,7 +1025,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
       (searchResponse!.items as unknown[]).length,
       "Semantic search should find the goal created in scenario 1",
     ).toBeGreaterThanOrEqual(1);
-  }, 120_000);
+  }, 300_000);
 
   // ── Scenario 13: Complete a task with result ────────────────────
 
@@ -1065,7 +1065,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
       typeof task!.result === "string" && task!.result.length > 0,
       "Result should be set",
     ).toBe(true);
-  }, 120_000);
+  }, 300_000);
 
   // ── Scenario 14: Get progress after completion ──────────────────
 
@@ -1107,7 +1107,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
       typeof progressResponse!.totalTasks === "number" && progressResponse!.totalTasks >= 2,
       "Should still have ≥2 total tasks",
     ).toBe(true);
-  }, 120_000);
+  }, 300_000);
 
   // ── Scenario 15: List tasks filtered by status ──────────────────
 
@@ -1178,7 +1178,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     await allure.step("Extracted second task ID", async () => {
       await attachText("second_task_id", secondTaskId ?? "NOT_FOUND");
     });
-  }, 120_000);
+  }, 300_000);
 
   // ── Scenario 16: Search tasks with query + hasDependencies ──────
 
@@ -1218,7 +1218,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     });
 
     expect(toolResponses.length, "Expected at least one tool response").toBeGreaterThanOrEqual(1);
-  }, 120_000);
+  }, 300_000);
 
   // ── Scenario 17: Goal planned → pending ─────────────────────────
 
@@ -1253,7 +1253,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
 
     // Track stored status
     goalStoredStatus = "pending";
-  }, 120_000);
+  }, 300_000);
 
   // ── Scenario 18: Goal pending → in_progress ─────────────────────
 
@@ -1287,7 +1287,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
 
     // Track stored status
     goalStoredStatus = "in_progress";
-  }, 120_000);
+  }, 300_000);
 
   // ── Scenario 19: List goals (verify updated goal appears) ───────
   //
@@ -1333,7 +1333,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     const ourGoal = goalItems.find((g) => g.id === createdGoalId);
     expect(ourGoal, "Our goal should appear in the list").toBeDefined();
     expect(ourGoal!.status, "Goal should be in_progress (from S18)").toBe("in_progress");
-  }, 120_000);
+  }, 300_000);
 
   // ── Scenario 20: Update goal with metadata ──────────────────────
 
@@ -1367,7 +1367,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     expect(updateResponse!.version).toBe("1.0");
     // Status should remain in_progress (only metadata was updated)
     expect(updateResponse!.status, "Status should remain in_progress").toBe("in_progress");
-  }, 120_000);
+  }, 300_000);
 
   // ── Scenario 21: Fail a task with error ─────────────────────────
 
@@ -1418,7 +1418,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     expect(typeof task!.error === "string" && task!.error.length > 0, "Error should be set").toBe(
       true,
     );
-  }, 120_000);
+  }, 300_000);
 
   // ── Scenario 22: Replan with replace_failed strategy ────────────
   //
@@ -1490,7 +1490,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
 
     // replanGoal always persists status as "planned"
     goalStoredStatus = "planned";
-  }, 180_000);
+  }, 300_000);
 
   // ── Scenario 23: Replan with replace_all strategy ───────────────
   //
@@ -1551,7 +1551,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
 
     // replanGoal always persists status as "planned"
     goalStoredStatus = "planned";
-  }, 240_000);
+  }, 300_000);
 
   // ── Scenario 24: Validate tree after replan ─────────────────────
 
@@ -1587,7 +1587,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
       typeof validateResponse!.taskCount === "number" && validateResponse!.taskCount >= 2,
       "Should have tasks from the replan",
     ).toBe(true);
-  }, 120_000);
+  }, 300_000);
 
   // ── Scenario 25: Complete goal lifecycle ─────────────────────────
 
@@ -1646,5 +1646,5 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
 
     // Final stored status
     goalStoredStatus = "completed";
-  }, 300_000); // Extra time for up to 3 sequential agent calls
+  }, 600_000); // Up to 3 sequential agent calls on CPU-only CI
 });

@@ -79,7 +79,7 @@
     "test:ci": "cross-env CI=true vitest run tests/unit",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage tests/unit",
-    "test:agent": "cross-env GMS_AGENT_TEST=1 OLLAMA_HOST=http://127.0.0.1:11434 QDRANT_URL=http://localhost:6333 vitest run tests/agent",
+    "test:agent": "cross-env GMS_AGENT_TEST=1 OLLAMA_HOST=http://127.0.0.1:11434 QDRANT_URL=http://localhost:6333 vitest run tests/agent --reporter=verbose",
     "allure:generate": "npx rimraf allure-report && npx allure generate -o allure-report",
     "allure:open": "npx allure open allure-report",
     "test:allure": "npx rimraf allure-results && npm run test && npm run test:agent && npm run allure:generate && npm run allure:open",
