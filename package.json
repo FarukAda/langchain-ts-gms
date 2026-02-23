@@ -96,7 +96,7 @@
     "@langchain/ollama": "^1.2.4",
     "@langchain/qdrant": "^1.0.1",
     "@qdrant/qdrant-js": "^1.17.0",
-    "langchain": "^1.2.25",
+    "langchain": "^1.2.26",
     "zod": "^4.3.6"
   },
   "devDependencies": {
