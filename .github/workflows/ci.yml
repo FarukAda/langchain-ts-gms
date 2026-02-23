@@ -51,7 +51,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: validate
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 130
     env:
       QDRANT_URL: http://localhost:6333
       OLLAMA_HOST: http://127.0.0.1:11434

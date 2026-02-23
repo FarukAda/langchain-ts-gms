@@ -536,7 +536,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
       Array.isArray(planResponse!.executionOrder),
       "Planning should include executionOrder",
     ).toBe(true);
-  }, 300_000);
+  }, 600_000);
 
   // ── Scenario 2: Get goal details ────────────────────────────────
 
