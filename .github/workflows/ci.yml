@@ -46,29 +46,18 @@ jobs:
       - name: Audit dependencies
         run: npm audit --audit-level=high --omit=dev
 
-  # ── Stage 2: Agent integration tests (main only) ──────────────────
+  # ── Stage 2: Agent integration tests (self-hosted GPU runner) ──────
   integration-agent:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: validate
-    runs-on: ubuntu-latest
-    timeout-minutes: 130
+    runs-on: [self-hosted, gpu]
+    timeout-minutes: 30
     env:
       QDRANT_URL: http://localhost:6333
       OLLAMA_HOST: http://127.0.0.1:11434
       OLLAMA_EMBEDDING_MODEL: nomic-embed-text
       OLLAMA_CHAT_MODEL: llama3.2:3b
       GMS_AGENT_TEST: "1"
-    services:
-      qdrant:
-        image: qdrant/qdrant:v1.16.3
-        ports:
-          - 6333:6333
-          - 6334:6334
-        options: >-
-          --health-cmd "bash -c 'echo > /dev/tcp/localhost/6333' || exit 1"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 30
 
     steps:
       - name: Checkout
@@ -83,62 +72,28 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Wait for Qdrant readiness
+      - name: Verify Ollama is reachable
         run: |
-          for i in {1..30}; do
-            if curl -fsS "${QDRANT_URL}/readyz" >/dev/null; then
-              echo "Qdrant is ready"
-              exit 0
-            fi
-            sleep 2
-          done
-          echo "Qdrant did not become ready in time"
-          exit 1
+          if ! curl -fsS "${OLLAMA_HOST}/api/tags" > /dev/null 2>&1; then
+            echo "::error::Ollama is not running at ${OLLAMA_HOST}. Start it before the runner picks up jobs."
+            exit 1
+          fi
+          echo "Ollama is reachable"
+          ollama list || true
 
-      - name: Install and start Ollama
+      - name: Verify Qdrant is reachable
         run: |
-          curl -fsSL https://ollama.com/install.sh | sh
-          nohup ollama serve >/tmp/ollama.log 2>&1 &
-          sleep 2
-          for i in {1..45}; do
-            if curl -fsS "${OLLAMA_HOST}/api/tags" >/dev/null 2>&1; then
-              echo "Ollama is ready"
-              exit 0
-            fi
-            sleep 2
-          done
-          echo "Ollama did not become ready in time"
-          cat /tmp/ollama.log || true
-          exit 1
-
-      - name: Pull Ollama models
-        run: |
-          for model in nomic-embed-text llama3.2:3b; do
-            for attempt in 1 2 3; do
-              echo "Pulling ${model} (attempt ${attempt})"
-              if ollama pull "${model}"; then
-                break
-              fi
-              if [ "${attempt}" -eq 3 ]; then
-                echo "Failed to pull ${model} after retries"
-                exit 1
-              fi
-              sleep 5
-            done
-          done
-          ollama list
+          if ! curl -fsS "${QDRANT_URL}/readyz" > /dev/null 2>&1; then
+            echo "::error::Qdrant is not running at ${QDRANT_URL}. Start it before the runner picks up jobs."
+            exit 1
+          fi
+          echo "Qdrant is reachable"
 
       - name: Typecheck
         run: npm run typecheck
 
       - name: Run agent tests
         run: npm run test:agent
-
-      - name: Dump service logs on failure
-        if: failure()
-        run: |
-          echo "===== OLLAMA LOG ====="
-          cat /tmp/ollama.log || true
 
   # ── Stage 3: Publish to npm (main only, after all tests pass) ─────
   publish:
