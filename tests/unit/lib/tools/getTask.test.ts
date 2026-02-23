@@ -19,7 +19,7 @@ describe("createGetTaskTool", () => {
       metadata: {},
     };
     const tool = createGetTaskTool(createToolDeps(GOAL_ID, goal));
-    const raw = (await tool.invoke({ goalId: GOAL_ID, taskId: TASK_ID }));
+    const raw = await tool.invoke({ goalId: GOAL_ID, taskId: TASK_ID });
     const result = JSON.parse(raw) as { task: Task; parentId: string | null };
     expect(result.task.id).toBe(TASK_ID);
     expect(result.parentId).toBeNull();
@@ -53,7 +53,7 @@ describe("createGetTaskTool", () => {
       metadata: {},
     };
     const tool = createGetTaskTool(createToolDeps(GOAL_ID, goal));
-    const raw = (await tool.invoke({ goalId: GOAL_ID, taskId: CHILD_ID }));
+    const raw = await tool.invoke({ goalId: GOAL_ID, taskId: CHILD_ID });
     const result = JSON.parse(raw) as { task: Task; parentId: string };
     expect(result.task.id).toBe(CHILD_ID);
     expect(result.parentId).toBe(TASK_ID);
@@ -71,7 +71,7 @@ describe("createGetTaskTool", () => {
       metadata: {},
     };
     const tool = createGetTaskTool(createToolDeps(GOAL_ID, goal));
-    const raw = (await tool.invoke({ goalId: GOAL_ID, taskId: TASK_ID }));
+    const raw = await tool.invoke({ goalId: GOAL_ID, taskId: TASK_ID });
     const result = JSON.parse(raw) as { dependencies: string[]; subTasksCount: number };
     expect(result.dependencies).toEqual([CHILD_ID]);
     expect(result.subTasksCount).toBe(1);

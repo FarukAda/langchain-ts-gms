@@ -56,10 +56,7 @@ describe("createReplanGoalTool", () => {
   it("replaces all tasks with replace_all strategy", async () => {
     const existingId1 = crypto.randomUUID();
     const existingId2 = crypto.randomUUID();
-    const existing = [
-      makeTask({ id: existingId1 }),
-      makeTask({ id: existingId2 }),
-    ];
+    const existing = [makeTask({ id: existingId1 }), makeTask({ id: existingId2 })];
     const goal = baseGoal(existing);
     const tool = createReplanGoalTool(createToolDeps(GOAL_ID, goal));
     const raw = await tool.invoke({ goalId: GOAL_ID, strategy: "replace_all" });
@@ -107,8 +104,6 @@ describe("createReplanGoalTool", () => {
       chatModel: mockChatModel(),
       decomposeOptions: { topK: 1, maxDepth: 0 },
     });
-    await expect(
-      tool.invoke({ goalId: GOAL_ID }),
-    ).rejects.toThrow("MISSING_DEPENDENCY");
+    await expect(tool.invoke({ goalId: GOAL_ID })).rejects.toThrow("MISSING_DEPENDENCY");
   });
 });

@@ -162,7 +162,8 @@ function extractAllToolResponses(messages: BaseMessage[]): Record<string, unknow
     // Case 3: If content is an array, try each block individually
     if (Array.isArray(content)) {
       for (const block of content as Array<Record<string, unknown>>) {
-        const blockText = typeof block === "string" ? block : typeof block?.text === "string" ? block.text : null;
+        const blockText =
+          typeof block === "string" ? block : typeof block?.text === "string" ? block.text : null;
         if (blockText) {
           const blockParsed = tryParseJson(blockText);
           if (blockParsed) {
@@ -247,7 +248,10 @@ function assertToolCalled(
   toolName: string,
 ): { tool: string; args: unknown } {
   const call = toolCalls.find((tc) => tc.tool === toolName);
-  expect(call, `Agent should have called ${toolName} but only called: [${toolCalls.map((c) => c.tool).join(", ")}]`).toBeDefined();
+  expect(
+    call,
+    `Agent should have called ${toolName} but only called: [${toolCalls.map((c) => c.tool).join(", ")}]`,
+  ).toBeDefined();
   return call!;
 }
 
@@ -361,9 +365,8 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
       }
     }
     // Determine vector size from the embedding model
-    const { createEmbeddingProvider } = await import(
-      "../../src/infra/embeddings/embeddingProvider.js"
-    );
+    const { createEmbeddingProvider } =
+      await import("../../src/infra/embeddings/embeddingProvider.js");
     const tempEmbed = createEmbeddingProvider();
     const sampleVec = await tempEmbed.embedQuery("test");
     await bootstrapQdrantCollections(qdrant, sampleVec.length);
@@ -429,7 +432,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
       // Also log to stderr for CI visibility
       console.error(
         `\n[DIAGNOSTIC] Test "${ctx.task.name}" failed. Message trajectory:\n` +
-        JSON.stringify(trajectory, null, 2),
+          JSON.stringify(trajectory, null, 2),
       );
     }
   });
@@ -504,7 +507,10 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     expect(createdGoalId).toBeDefined();
 
     // Mandatory assertions: validate planning response shape
-    expect(planResponse, "gms_plan_goal response must be parseable — silent skip not allowed").toBeDefined();
+    expect(
+      planResponse,
+      "gms_plan_goal response must be parseable — silent skip not allowed",
+    ).toBeDefined();
     expect(planResponse!.version, "Response should include contract version").toBe("1.0");
 
     // The risk-based HITL guardrail may trigger "human_approval_required"
@@ -519,7 +525,8 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
 
     // Map response status to stored status:
     // "human_approval_required" is response-only — stored status remains "pending"
-    goalStoredStatus = planResultStatus === "human_approval_required" ? "pending" : planResultStatus;
+    goalStoredStatus =
+      planResultStatus === "human_approval_required" ? "pending" : planResultStatus;
 
     expect(
       Array.isArray(planResponse!.tasks) && planResponse!.tasks.length >= 2,
@@ -644,7 +651,9 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     ).toBe(true);
     expect(progressResponse!.completedTasks, "No tasks completed").toBe(0);
     // All tasks should be pending (status set by hydrateTasks)
-    expect(progressResponse!.pendingTasks, "All tasks should be pending").toBe(progressResponse!.totalTasks);
+    expect(progressResponse!.pendingTasks, "All tasks should be pending").toBe(
+      progressResponse!.totalTasks,
+    );
   }, 120_000);
 
   // ── Scenario 5: List tasks ──────────────────────────────────────
@@ -714,7 +723,10 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     await allure.feature("Tool: gms_update_task");
 
     expect(createdGoalId, "createdGoalId must be set by scenario 1").toBeDefined();
-    expect(createdTaskId, "createdTaskId must be set by scenario 5 — cannot silently skip").toBeDefined();
+    expect(
+      createdTaskId,
+      "createdTaskId must be set by scenario 5 — cannot silently skip",
+    ).toBeDefined();
 
     const userPrompt = `Update task ${createdTaskId} for goal ${createdGoalId} to status "in_progress". Use the gms_update_task tool.`;
 
@@ -946,7 +958,8 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     expect(replanResponse, "gms_replan_goal response must be parseable").toBeDefined();
     expect(replanResponse!.version).toBe("1.0");
     expect(
-      Array.isArray(replanResponse!.replacedTaskIds) && replanResponse!.replacedTaskIds.length === 0,
+      Array.isArray(replanResponse!.replacedTaskIds) &&
+        replanResponse!.replacedTaskIds.length === 0,
       "Append strategy should not replace any tasks",
     ).toBe(true);
     expect(
@@ -980,7 +993,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     // A semantic query should find it even with different phrasing.
     const userPrompt =
       'Search for goals related to "web service with auth" using the gms_list_goals tool. ' +
-      'Pass a query parameter to perform a semantic search.';
+      "Pass a query parameter to perform a semantic search.";
 
     await allure.step("Send prompt to agent", async () => {
       await attachText("user_prompt", userPrompt);
@@ -1005,7 +1018,9 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
       (r) => Array.isArray(r.items) || typeof r.total === "number",
     );
     expect(searchResponse, "Semantic search response should contain items or total").toBeDefined();
-    expect(Array.isArray(searchResponse!.items), "Search response should contain items array").toBe(true);
+    expect(Array.isArray(searchResponse!.items), "Search response should contain items array").toBe(
+      true,
+    );
     expect(
       (searchResponse!.items as unknown[]).length,
       "Semantic search should find the goal created in scenario 1",
@@ -1046,7 +1061,10 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     const task = updateResponse!.task as Record<string, unknown> | undefined;
     expect(task, "Response should contain task object").toBeDefined();
     expect(task!.status, "Task should now be completed").toBe("completed");
-    expect(typeof task!.result === "string" && task!.result.length > 0, "Result should be set").toBe(true);
+    expect(
+      typeof task!.result === "string" && task!.result.length > 0,
+      "Result should be set",
+    ).toBe(true);
   }, 120_000);
 
   // ── Scenario 14: Get progress after completion ──────────────────
@@ -1099,8 +1117,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
 
     expect(createdGoalId).toBeDefined();
 
-    const userPrompt =
-      `List tasks with status "pending" for goal ${createdGoalId}. Use the gms_list_tasks tool with status filter set to ["pending"].`;
+    const userPrompt = `List tasks with status "pending" for goal ${createdGoalId}. Use the gms_list_tasks tool with status filter set to ["pending"].`;
 
     await allure.step("Send prompt to agent", async () => {
       await attachText("user_prompt", userPrompt);
@@ -1133,7 +1150,10 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     // Extract a second task ID for use in S21 (fail a task)
     const uuidPattern = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
     // Extract secondTaskId — mandatory for S21 (fail a task)
-    expect(Array.isArray(listResponse!.items), "Response must have items for secondTaskId extraction").toBe(true);
+    expect(
+      Array.isArray(listResponse!.items),
+      "Response must have items for secondTaskId extraction",
+    ).toBe(true);
     for (const item of listResponse!.items as Array<Record<string, unknown>>) {
       const id = item.id as string | undefined;
       if (id && id !== createdGoalId && id !== createdTaskId) {
@@ -1208,8 +1228,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
 
     expect(createdGoalId).toBeDefined();
 
-    const userPrompt =
-      `Update goal ${createdGoalId} status to "pending". Use the gms_update_goal tool.`;
+    const userPrompt = `Update goal ${createdGoalId} status to "pending". Use the gms_update_goal tool.`;
 
     await allure.step("Send prompt to agent", async () => {
       await attachText("user_prompt", userPrompt);
@@ -1244,8 +1263,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
 
     expect(createdGoalId).toBeDefined();
 
-    const userPrompt =
-      `Update goal ${createdGoalId} status to "in_progress". Use the gms_update_goal tool.`;
+    const userPrompt = `Update goal ${createdGoalId} status to "in_progress". Use the gms_update_goal tool.`;
 
     await allure.step("Send prompt to agent", async () => {
       await attachText("user_prompt", userPrompt);
@@ -1284,8 +1302,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
 
     expect(createdGoalId).toBeDefined();
 
-    const userPrompt =
-      `List all goals. Use the gms_list_goals tool.`;
+    const userPrompt = `List all goals. Use the gms_list_goals tool.`;
 
     await allure.step("Send prompt to agent", async () => {
       await attachText("user_prompt", userPrompt);
@@ -1311,14 +1328,9 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     expect(listResponse, "List response should contain items or total field").toBeDefined();
     expect(Array.isArray(listResponse!.items), "Response should contain items array").toBe(true);
     const goalItems = listResponse!.items as Array<Record<string, unknown>>;
-    expect(
-      goalItems.length,
-      "Should find at least one goal",
-    ).toBeGreaterThanOrEqual(1);
+    expect(goalItems.length, "Should find at least one goal").toBeGreaterThanOrEqual(1);
     // Verify our goal appears in the list with the expected status
-    const ourGoal = goalItems.find(
-      (g) => g.id === createdGoalId,
-    );
+    const ourGoal = goalItems.find((g) => g.id === createdGoalId);
     expect(ourGoal, "Our goal should appear in the list").toBeDefined();
     expect(ourGoal!.status, "Goal should be in_progress (from S18)").toBe("in_progress");
   }, 120_000);
@@ -1403,7 +1415,9 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     const task = updateResponse!.task as Record<string, unknown> | undefined;
     expect(task, "Response should contain task object").toBeDefined();
     expect(task!.status, "Task should now be failed").toBe("failed");
-    expect(typeof task!.error === "string" && task!.error.length > 0, "Error should be set").toBe(true);
+    expect(typeof task!.error === "string" && task!.error.length > 0, "Error should be set").toBe(
+      true,
+    );
   }, 120_000);
 
   // ── Scenario 22: Replan with replace_failed strategy ────────────
@@ -1452,7 +1466,10 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     expect(replanResponse, "gms_replan_goal response must be parseable").toBeDefined();
     expect(replanResponse!.version).toBe("1.0");
     // Verify the response has a valid structure
-    expect(Array.isArray(replanResponse!.replacedTaskIds), "replacedTaskIds should be an array").toBe(true);
+    expect(
+      Array.isArray(replanResponse!.replacedTaskIds),
+      "replacedTaskIds should be an array",
+    ).toBe(true);
     expect(
       Array.isArray(replanResponse!.newTaskIds) && replanResponse!.newTaskIds.length > 0,
       "Should have generated new tasks",
@@ -1511,7 +1528,9 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     expect(replanResponse, "gms_replan_goal response must be parseable").toBeDefined();
     expect(replanResponse!.version).toBe("1.0");
     // Verify the response has valid structure
-    expect(Array.isArray(replanResponse!.replacedTaskIds), "replacedTaskIds should be array").toBe(true);
+    expect(Array.isArray(replanResponse!.replacedTaskIds), "replacedTaskIds should be array").toBe(
+      true,
+    );
     expect(
       Array.isArray(replanResponse!.newTaskIds) && replanResponse!.newTaskIds.length > 0,
       "Should have generated new tasks",
@@ -1542,8 +1561,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
 
     expect(createdGoalId).toBeDefined();
 
-    const userPrompt =
-      `Validate the goal tree for goal ${createdGoalId}. Use the gms_validate_goal_tree tool.`;
+    const userPrompt = `Validate the goal tree for goal ${createdGoalId}. Use the gms_validate_goal_tree tool.`;
 
     await allure.step("Send prompt to agent", async () => {
       await attachText("user_prompt", userPrompt);

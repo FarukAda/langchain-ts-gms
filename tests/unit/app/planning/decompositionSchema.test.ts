@@ -1,7 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  DecompositionOutputSchema,
-} from "../../../../src/app/planning/decompositionSchema.js";
+import { DecompositionOutputSchema } from "../../../../src/app/planning/decompositionSchema.js";
 
 describe("decompositionSchema", () => {
   describe("DecompositionOutputSchema", () => {
@@ -47,10 +45,7 @@ describe("decompositionSchema", () => {
     it("rejects missing description", () => {
       expect(() =>
         DecompositionOutputSchema.parse({
-          tasks: [
-            { priority: "high" },
-            { description: "Task B", priority: "medium" },
-          ],
+          tasks: [{ priority: "high" }, { description: "Task B", priority: "medium" }],
         }),
       ).toThrow();
     });
@@ -74,9 +69,7 @@ describe("decompositionSchema", () => {
       });
       expect(result.tasks[0]!.subTasks).toHaveLength(1);
       expect(result.tasks[0]!.subTasks[0]!.subTasks).toHaveLength(1);
-      expect(result.tasks[0]!.subTasks[0]!.subTasks[0]!.description).toBe(
-        "Grandchild",
-      );
+      expect(result.tasks[0]!.subTasks[0]!.subTasks[0]!.description).toBe("Grandchild");
     });
 
     it("rejects invalid priority value", () => {
@@ -138,9 +131,7 @@ describe("decompositionSchema", () => {
             description: "Parent",
             priority: "high",
             type: "decision",
-            subTasks: [
-              { description: "Child", priority: "medium" },
-            ],
+            subTasks: [{ description: "Child", priority: "medium" }],
           },
           { description: "Sibling", priority: "low" },
         ],

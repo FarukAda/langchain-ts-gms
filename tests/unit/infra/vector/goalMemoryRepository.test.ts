@@ -21,10 +21,7 @@ vi.mock("@langchain/qdrant", () => ({
       scroll: typeof mockScroll;
       count: typeof mockCount;
     };
-    constructor(
-      embeddings: { embedQuery: typeof mockEmbedQuery },
-      _opts: unknown,
-    ) {
+    constructor(embeddings: { embedQuery: typeof mockEmbedQuery }, _opts: unknown) {
       this.embeddings = embeddings;
       this.client = { scroll: mockScroll, count: mockCount };
     }
@@ -42,9 +39,8 @@ vi.mock("@qdrant/qdrant-js", () => ({
 }));
 
 // Dynamic import after mocks
-const { GoalMemoryRepository } = await import(
-  "../../../../src/infra/vector/goalMemoryRepository.js"
-);
+const { GoalMemoryRepository } =
+  await import("../../../../src/infra/vector/goalMemoryRepository.js");
 
 function makeGoal(overrides: Partial<Goal> = {}): Goal {
   return {
@@ -113,10 +109,7 @@ describe("GoalMemoryRepository", () => {
       await repo.upsert(goal);
 
       expect(mockAddDocuments).toHaveBeenCalledTimes(1);
-      const [docs, opts] = mockAddDocuments.mock.calls[0]! as [
-        Document[],
-        { ids: string[] },
-      ];
+      const [docs, opts] = mockAddDocuments.mock.calls[0]! as [Document[], { ids: string[] }];
       expect(docs[0]!.pageContent).toBe("Test goal");
       expect(docs[0]!.metadata.goal_id).toBe(goal.id);
       expect(docs[0]!.metadata.status).toBe("pending");
@@ -188,7 +181,11 @@ describe("GoalMemoryRepository", () => {
         filter: { status: "planned", tenantId: "t1" },
       });
 
-      const [, , filter] = mockSimilaritySearchWithScore.mock.calls[0]! as [unknown, unknown, object];
+      const [, , filter] = mockSimilaritySearchWithScore.mock.calls[0]! as [
+        unknown,
+        unknown,
+        object,
+      ];
       expect(filter).toEqual({
         must: [
           { key: "metadata.status", match: { value: "planned" } },
@@ -242,9 +239,7 @@ describe("GoalMemoryRepository", () => {
       const repo = new GoalMemoryRepository({
         embeddings: mockEmbeddings,
       });
-      const goal = await repo.getById(
-        "550e8400-e29b-41d4-a716-446655440030",
-      );
+      const goal = await repo.getById("550e8400-e29b-41d4-a716-446655440030");
 
       expect(goal).not.toBeNull();
       expect(goal!.id).toBe("550e8400-e29b-41d4-a716-446655440030");
@@ -657,9 +652,7 @@ describe("GoalMemoryRepository", () => {
       expect(result.items).toHaveLength(1);
       // Verify scroll was called with cursor offset
       const dataScrollCall = mockScroll.mock.calls[1]!;
-      expect(dataScrollCall[1]).toEqual(
-        expect.objectContaining({ offset: "cursor-after-3" }),
-      );
+      expect(dataScrollCall[1]).toEqual(expect.objectContaining({ offset: "cursor-after-3" }));
     });
   });
 

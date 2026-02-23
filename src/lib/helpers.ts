@@ -13,7 +13,6 @@ type StripNullProps<T> = {
   [K in keyof T]: Exclude<T[K], null>;
 };
 
-
 /**
  * Replace `null` values with `undefined` in a shallow copy of the input.
  *

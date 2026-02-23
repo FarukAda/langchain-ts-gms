@@ -13,7 +13,7 @@ describe("createUpdateGoalTool", () => {
   it("succeeds with a valid status transition (pending → in_progress)", async () => {
     const goal = baseGoal();
     const tool = createUpdateGoalTool(createToolDeps(GOAL_ID, goal));
-    const raw = (await tool.invoke({ goalId: GOAL_ID, status: "in_progress" }));
+    const raw = await tool.invoke({ goalId: GOAL_ID, status: "in_progress" });
     const result = JSON.parse(raw) as { status: string };
     expect(result.status).toBe("in_progress");
   });
@@ -67,7 +67,7 @@ describe("createUpdateGoalTool", () => {
   it("updates priority without changing status", async () => {
     const goal = baseGoal();
     const tool = createUpdateGoalTool(createToolDeps(GOAL_ID, goal));
-    const raw = (await tool.invoke({ goalId: GOAL_ID, priority: "critical" }));
+    const raw = await tool.invoke({ goalId: GOAL_ID, priority: "critical" });
     const result = JSON.parse(raw) as { status: string };
     expect(result.status).toBe("pending");
     expect(goal.priority).toBe("critical");

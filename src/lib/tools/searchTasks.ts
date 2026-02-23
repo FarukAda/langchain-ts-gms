@@ -1,5 +1,9 @@
 import { tool } from "@langchain/core/tools";
-import { SearchTasksInputSchema, coerceLifecycleInput, DEFAULT_PAGE_LIMIT } from "../schemas/lifecycleSchemas.js";
+import {
+  SearchTasksInputSchema,
+  coerceLifecycleInput,
+  DEFAULT_PAGE_LIMIT,
+} from "../schemas/lifecycleSchemas.js";
 import {
   getGoalOrThrow,
   matchesFilters,

@@ -83,10 +83,14 @@ export function migrateTasksToHierarchy(raw: unknown): Task[] {
       ...(t.capabilityId !== undefined && { capabilityId: t.capabilityId as string }),
       // --- Rich metadata ---
       ...(t.type !== undefined && { type: t.type as TaskType }),
-      ...(t.acceptanceCriteria !== undefined && { acceptanceCriteria: t.acceptanceCriteria as string }),
+      ...(t.acceptanceCriteria !== undefined && {
+        acceptanceCriteria: t.acceptanceCriteria as string,
+      }),
       ...(t.expectedOutput !== undefined && { expectedOutput: t.expectedOutput as string }),
       ...(t.riskLevel !== undefined && { riskLevel: t.riskLevel as RiskLevel }),
-      ...(t.estimatedComplexity !== undefined && { estimatedComplexity: t.estimatedComplexity as Complexity }),
+      ...(t.estimatedComplexity !== undefined && {
+        estimatedComplexity: t.estimatedComplexity as Complexity,
+      }),
       ...(t.rationale !== undefined && { rationale: t.rationale as string }),
     } satisfies Task;
   });

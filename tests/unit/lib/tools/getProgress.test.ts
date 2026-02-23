@@ -65,10 +65,7 @@ describe("createGetProgressTool", () => {
   });
 
   it("returns 1.0 completion when all tasks completed", async () => {
-    const tasks = [
-      makeTask({ status: "completed" }),
-      makeTask({ status: "completed" }),
-    ];
+    const tasks = [makeTask({ status: "completed" }), makeTask({ status: "completed" })];
     const goal = baseGoal(tasks);
     const tool = createGetProgressTool(createToolDeps(GOAL_ID, goal));
     const raw = await tool.invoke({ goalId: GOAL_ID });

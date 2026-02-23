@@ -1,5 +1,9 @@
 import { tool } from "@langchain/core/tools";
-import { ListGoalsInputSchema, coerceLifecycleInput, DEFAULT_PAGE_LIMIT } from "../schemas/lifecycleSchemas.js";
+import {
+  ListGoalsInputSchema,
+  coerceLifecycleInput,
+  DEFAULT_PAGE_LIMIT,
+} from "../schemas/lifecycleSchemas.js";
 import { paginate, stripNulls, wrapToolResponse } from "../helpers.js";
 import type { GmsToolDeps } from "../types.js";
 import type { Goal } from "../../domain/contracts.js";
@@ -35,9 +39,7 @@ export const createListGoalsTool = (deps: GmsToolDeps) =>
         items = listed.items;
       }
       const page =
-        input.query && input.query.trim().length > 0
-          ? paginate(items, lim, off)
-          : { items, total };
+        input.query && input.query.trim().length > 0 ? paginate(items, lim, off) : { items, total };
       return wrapToolResponse({
         total: page.total,
         limit: lim,

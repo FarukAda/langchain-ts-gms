@@ -209,9 +209,11 @@ describe("decomposeGoal", () => {
     // eslint-disable-next-line @typescript-eslint/unbound-method
     const searchFn = vi.mocked(repo).searchByVector;
     const callArgs = searchFn.mock.calls[0]!;
-    expect(callArgs[1]).toEqual(expect.objectContaining({
-      filter: { tenantId: "t-42" },
-    }));
+    expect(callArgs[1]).toEqual(
+      expect.objectContaining({
+        filter: { tenantId: "t-42" },
+      }),
+    );
     expect(result.tasks.length).toBe(3);
   });
 
@@ -252,7 +254,11 @@ describe("decomposeGoal", () => {
           description: "Parent with critical priority",
           priority: "critical" as const,
           subTasks: [
-            { description: "SubTask inherits parent priority", priority: undefined as unknown as string, subTasks: [] },
+            {
+              description: "SubTask inherits parent priority",
+              priority: undefined as unknown as string,
+              subTasks: [],
+            },
             { description: "SubTask with own priority", priority: "low" as const, subTasks: [] },
           ],
         },
@@ -298,7 +304,14 @@ describe("decomposeGoal", () => {
     const invokeMock = (chatObj.withStructuredOutput() as MockStructured).invoke;
 
     await decomposeGoal(
-      { id: "g-prompt", description: "Build an API", status: "pending", priority: "high", tasks: [], metadata: {} },
+      {
+        id: "g-prompt",
+        description: "Build an API",
+        status: "pending",
+        priority: "high",
+        tasks: [],
+        metadata: {},
+      },
       repo,
       embeddings,
       chat,
@@ -339,7 +352,14 @@ describe("decomposeGoal", () => {
     };
     const chat = mockChatModel(enrichedDecomposition as never);
     const result = await decomposeGoal(
-      { id: "g-hydrate", description: "Build feature", status: "pending", priority: "high", tasks: [], metadata: {} },
+      {
+        id: "g-hydrate",
+        description: "Build feature",
+        status: "pending",
+        priority: "high",
+        tasks: [],
+        metadata: {},
+      },
       mockRepo([]),
       mockEmbeddings(),
       chat,
@@ -365,7 +385,14 @@ describe("decomposeGoal", () => {
     const invokeMock = (chatObj.withStructuredOutput() as MockStructured2).invoke;
 
     await decomposeGoal(
-      { id: "g-tmpl", description: "Custom goal", status: "pending", priority: "medium", tasks: [], metadata: {} },
+      {
+        id: "g-tmpl",
+        description: "Custom goal",
+        status: "pending",
+        priority: "medium",
+        tasks: [],
+        metadata: {},
+      },
       repo,
       embeddings,
       chat,

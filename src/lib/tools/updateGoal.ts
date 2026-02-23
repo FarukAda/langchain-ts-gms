@@ -13,7 +13,11 @@ export const createUpdateGoalTool = (deps: GmsToolDeps) =>
       // Small LLMs sometimes pass metadata as a JSON string — coerce to object
       let parsedMeta: Record<string, unknown> | undefined;
       if (typeof input.metadata === "string") {
-        try { parsedMeta = JSON.parse(input.metadata) as Record<string, unknown>; } catch { /* ignore unparseable */ }
+        try {
+          parsedMeta = JSON.parse(input.metadata) as Record<string, unknown>;
+        } catch {
+          /* ignore unparseable */
+        }
       } else if (typeof input.metadata === "object" && input.metadata !== null) {
         parsedMeta = input.metadata;
       }

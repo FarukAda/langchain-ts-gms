@@ -32,9 +32,7 @@ vi.mock("@langchain/ollama", () => ({
 }));
 
 // Dynamic import AFTER mocks are set up
-const { createChatModelProvider } = await import(
-  "../../../../src/infra/chat/chatModelProvider.js"
-);
+const { createChatModelProvider } = await import("../../../../src/infra/chat/chatModelProvider.js");
 
 describe("createChatModelProvider", () => {
   const originalEnv = { ...process.env };
@@ -57,9 +55,7 @@ describe("createChatModelProvider", () => {
     const provider = createChatModelProvider();
     expect(provider).toBeDefined();
     expect((provider as unknown as { model: string }).model).toBe("llama3");
-    expect((provider as unknown as { baseUrl: string }).baseUrl).toBe(
-      "http://localhost:11434",
-    );
+    expect((provider as unknown as { baseUrl: string }).baseUrl).toBe("http://localhost:11434");
   });
 
   it("uses GMS_OLLAMA_CHAT_MODEL when set", () => {
@@ -69,9 +65,7 @@ describe("createChatModelProvider", () => {
     process.env.GMS_OLLAMA_CHAT_MODEL = "custom-chat";
 
     const provider = createChatModelProvider();
-    expect((provider as unknown as { model: string }).model).toBe(
-      "custom-chat",
-    );
+    expect((provider as unknown as { model: string }).model).toBe("custom-chat");
   });
 
   it("falls back to OLLAMA_CHAT_MODEL when GMS override is not set", () => {
@@ -90,8 +84,6 @@ describe("createChatModelProvider", () => {
     process.env.OLLAMA_CHAT_MODEL = "llama3";
 
     const provider = createChatModelProvider();
-    expect((provider as unknown as { temperature: number }).temperature).toBe(
-      0,
-    );
+    expect((provider as unknown as { temperature: number }).temperature).toBe(0);
   });
 });

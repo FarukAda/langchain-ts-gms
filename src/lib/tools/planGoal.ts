@@ -57,10 +57,10 @@ export const createGmsPlanTool = (deps: GmsToolDeps) => {
       description:
         deps.toolDescription ??
         "Create a structured task plan from a natural-language goal description. " +
-        "Use this FIRST when you receive a new objective that needs breakdown into steps. " +
-        "Returns JSON: { goalId, status, tasks[], executionOrder[] }. " +
-        "This tool only plans — it does NOT execute tasks. " +
-        "After planning, use gms_update_task to track progress on individual tasks.",
+          "Use this FIRST when you receive a new objective that needs breakdown into steps. " +
+          "Returns JSON: { goalId, status, tasks[], executionOrder[] }. " +
+          "This tool only plans — it does NOT execute tasks. " +
+          "After planning, use gms_update_task to track progress on individual tasks.",
       schema: GmsToolInputSchema,
     },
   );

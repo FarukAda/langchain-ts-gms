@@ -48,9 +48,7 @@ describe("qdrantClient", () => {
 
       const client = createQdrantClient();
       expect(client).toBeDefined();
-      expect((client as unknown as { url: string }).url).toBe(
-        "http://my-qdrant:6333",
-      );
+      expect((client as unknown as { url: string }).url).toBe("http://my-qdrant:6333");
     });
 
     it("uses provided config overrides", () => {
@@ -59,9 +57,7 @@ describe("qdrantClient", () => {
         url: "http://custom:1234",
         apiKey: "key-123",
       });
-      expect((client as unknown as { url: string }).url).toBe(
-        "http://custom:1234",
-      );
+      expect((client as unknown as { url: string }).url).toBe("http://custom:1234");
       expect((client as unknown as { apiKey: string }).apiKey).toBe("key-123");
     });
 
@@ -109,10 +105,7 @@ describe("qdrantClient", () => {
 
     it("skips collection creation when collections already exist", async () => {
       mockGetCollections.mockResolvedValue({
-        collections: [
-          { name: GOALS_COLLECTION },
-          { name: CAPABILITIES_COLLECTION },
-        ],
+        collections: [{ name: GOALS_COLLECTION }, { name: CAPABILITIES_COLLECTION }],
       });
       mockCreatePayloadIndex.mockResolvedValue(undefined);
 
@@ -139,47 +132,35 @@ describe("qdrantClient", () => {
     it("tolerates 'already exists' errors on payload indexes", async () => {
       mockGetCollections.mockResolvedValue({ collections: [] });
       mockCreateCollection.mockResolvedValue(undefined);
-      mockCreatePayloadIndex.mockRejectedValue(
-        new Error("field already exists"),
-      );
+      mockCreatePayloadIndex.mockRejectedValue(new Error("field already exists"));
 
       process.env.NODE_ENV = "test";
       const client = createQdrantClient();
 
       // Should NOT throw because the error message contains "already exists"
-      await expect(
-        bootstrapQdrantCollections(client, 384),
-      ).resolves.toBeUndefined();
+      await expect(bootstrapQdrantCollections(client, 384)).resolves.toBeUndefined();
     });
 
     it("tolerates 'AlreadyExists' errors on payload indexes", async () => {
       mockGetCollections.mockResolvedValue({ collections: [] });
       mockCreateCollection.mockResolvedValue(undefined);
-      mockCreatePayloadIndex.mockRejectedValue(
-        new Error("AlreadyExists: some detail"),
-      );
+      mockCreatePayloadIndex.mockRejectedValue(new Error("AlreadyExists: some detail"));
 
       process.env.NODE_ENV = "test";
       const client = createQdrantClient();
 
-      await expect(
-        bootstrapQdrantCollections(client, 384),
-      ).resolves.toBeUndefined();
+      await expect(bootstrapQdrantCollections(client, 384)).resolves.toBeUndefined();
     });
 
     it("rethrows unexpected errors from createPayloadIndex", async () => {
       mockGetCollections.mockResolvedValue({ collections: [] });
       mockCreateCollection.mockResolvedValue(undefined);
-      mockCreatePayloadIndex.mockRejectedValue(
-        new Error("Connection refused"),
-      );
+      mockCreatePayloadIndex.mockRejectedValue(new Error("Connection refused"));
 
       process.env.NODE_ENV = "test";
       const client = createQdrantClient();
 
-      await expect(
-        bootstrapQdrantCollections(client, 384),
-      ).rejects.toThrow("Connection refused");
+      await expect(bootstrapQdrantCollections(client, 384)).rejects.toThrow("Connection refused");
     });
 
     it("rethrows non-Error thrown values", async () => {
@@ -190,9 +171,7 @@ describe("qdrantClient", () => {
       process.env.NODE_ENV = "test";
       const client = createQdrantClient();
 
-      await expect(
-        bootstrapQdrantCollections(client, 384),
-      ).rejects.toBe("string error");
+      await expect(bootstrapQdrantCollections(client, 384)).rejects.toBe("string error");
     });
   });
 

@@ -17,10 +17,10 @@ export type Priority = z.infer<typeof PrioritySchema>;
 
 /** Task type for research-then-action planning (OASF-aligned) */
 export const TaskTypeSchema = z.enum([
-  "research",     // Gather information before acting
-  "action",       // Concrete executable step
-  "validation",   // Verify a previous task's result
-  "decision",     // Choose between alternatives
+  "research", // Gather information before acting
+  "action", // Concrete executable step
+  "validation", // Verify a previous task's result
+  "decision", // Choose between alternatives
 ]);
 export type TaskType = z.infer<typeof TaskTypeSchema>;
 
@@ -67,9 +67,14 @@ export const TaskSchema = z.object({
   error: z.string().optional(),
   capabilityId: z.string().optional(),
   // --- Rich metadata ---
-  type: TaskTypeSchema.optional().meta({ description: "Task type: research, action, validation, or decision" }),
+  type: TaskTypeSchema.optional().meta({
+    description: "Task type: research, action, validation, or decision",
+  }),
   acceptanceCriteria: z.string().optional().meta({ description: "How to know this task is done" }),
-  expectedOutput: z.string().optional().meta({ description: "What this task produces for downstream tasks" }),
+  expectedOutput: z
+    .string()
+    .optional()
+    .meta({ description: "What this task produces for downstream tasks" }),
   riskLevel: RiskLevelSchema.optional().meta({ description: "Risk level for HITL gating" }),
   estimatedComplexity: ComplexitySchema.optional().meta({ description: "Estimated effort" }),
   rationale: z.string().optional().meta({ description: "Why this task exists in the plan" }),

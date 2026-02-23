@@ -1,11 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { createGmsLifecycleTools } from "../../../src/lib/gmsTool.js";
 import { createGmsPlanTool } from "../../../src/lib/tools/planGoal.js";
-import {
-  mockEmbeddings,
-  createMockRepos,
-  mockChatModel,
-} from "../../helpers/mockRepository.js";
+import { mockEmbeddings, createMockRepos, mockChatModel } from "../../helpers/mockRepository.js";
 
 /**
  * Integration-level tests for the composite tool factories.

@@ -26,12 +26,21 @@ export const createReplanGoalTool = (deps: GmsToolDeps) =>
             Object.entries(optsRaw).filter(([, v]) => v != null),
           ) as DecomposeOptions)
         : undefined;
-      const { tasks: generatedTasks } = await decomposeGoal(goal, capabilityRepo, embeddings, deps.chatModel, opts);
+      const { tasks: generatedTasks } = await decomposeGoal(
+        goal,
+        capabilityRepo,
+        embeddings,
+        deps.chatModel,
+        opts,
+      );
 
       if (generatedTasks.length === 0) {
-        logWarn("Replan decomposition produced zero tasks — capability search may have returned no results", {
-          goalId: goal.id,
-        });
+        logWarn(
+          "Replan decomposition produced zero tasks — capability search may have returned no results",
+          {
+            goalId: goal.id,
+          },
+        );
       }
 
       const oldFlat = flattenTasks(goal.tasks);

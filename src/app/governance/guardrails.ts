@@ -99,6 +99,8 @@ export function evaluateGuardrails(
 ): GuardrailResult {
   const flat = flattenTasks(tasks);
   const check = checkGuardrail(tasks, guardOpts, flat);
-  const needsHumanApproval = check.allowed ? requiresHumanApproval(tasks, approvalOpts, flat) : false;
+  const needsHumanApproval = check.allowed
+    ? requiresHumanApproval(tasks, approvalOpts, flat)
+    : false;
   return { check, needsHumanApproval, flatCount: flat.length };
 }

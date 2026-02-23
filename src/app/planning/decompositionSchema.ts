@@ -17,16 +17,20 @@ import {
  * - Zod defaults act as structural fallback if the LLM omits the field
  */
 const DecomposedTaskSchema = z.object({
-  description: z.string().meta({ description: "Clear, actionable task description (one sentence)" }),
+  description: z
+    .string()
+    .meta({ description: "Clear, actionable task description (one sentence)" }),
   priority: PrioritySchema.meta({ description: "Task priority: low, medium, high, or critical" }),
   type: TaskTypeSchema.default("action").meta({
-    description: "Task type: research (gather info), action (execute), validation (verify), or decision (choose)",
+    description:
+      "Task type: research (gather info), action (execute), validation (verify), or decision (choose)",
   }),
   acceptanceCriteria: z.string().optional().meta({
     description: "How to know this task is done. E.g. 'API returns 200 with valid JWT'",
   }),
   expectedOutput: z.string().optional().meta({
-    description: "What this task produces for downstream tasks. E.g. 'List of framework candidates with pros/cons'",
+    description:
+      "What this task produces for downstream tasks. E.g. 'List of framework candidates with pros/cons'",
   }),
   riskLevel: RiskLevelSchema.default("low").meta({
     description: "Risk level for HITL gating: low, medium, high, or critical",
@@ -38,10 +42,9 @@ const DecomposedTaskSchema = z.object({
     description: "Why this task exists in the plan — what knowledge gap or action it addresses",
   }),
   get subTasks(): z.ZodDefault<z.ZodArray<typeof DecomposedTaskSchema>> {
-    return z
-      .array(DecomposedTaskSchema)
-      .default([])
-      .meta({ description: "Further breakdown if this task is still complex; leave empty for atomic tasks" });
+    return z.array(DecomposedTaskSchema).default([]).meta({
+      description: "Further breakdown if this task is still complex; leave empty for atomic tasks",
+    });
   },
 });
 

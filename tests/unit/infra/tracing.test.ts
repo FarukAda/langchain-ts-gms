@@ -122,7 +122,11 @@ describe("tracing", () => {
   describe("env-based log level fallback", () => {
     it("reads LOG_LEVEL from env when setLogLevel was not called", async () => {
       // Use a fresh module to reset internal state (_levelInitialized = false)
-      const { log: freshLog, setLogSilent: freshSilent, setLogWriter: freshWriter } = (await import(
+      const {
+        log: freshLog,
+        setLogSilent: freshSilent,
+        setLogWriter: freshWriter,
+      } = (await import(
         "../../../src/infra/observability/tracing.js?env-test" + Date.now()
       )) as typeof TracingModule;
       freshSilent(false);
@@ -197,7 +201,7 @@ describe("tracing", () => {
       await expect(
         withNodeTiming("fail_node", "trace-3", "goal-3", () => {
           // eslint-disable-next-line @typescript-eslint/only-throw-error
-          throw "string-error";  
+          throw "string-error";
         }),
       ).rejects.toBe("string-error");
       const errorCall = JSON.parse(
@@ -212,6 +216,5 @@ describe("tracing", () => {
       );
       expect(result).toBe("async-result");
     });
-
   });
 });

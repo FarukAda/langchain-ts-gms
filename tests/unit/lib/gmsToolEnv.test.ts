@@ -137,7 +137,6 @@ describe("gmsTool env factories", () => {
       });
       expect(result.planningTool).toBeDefined();
     });
-
   });
 
   describe("createGmsLifecycleTools (non-env)", () => {

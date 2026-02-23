@@ -8,8 +8,6 @@ describe("GmsStateAnnotation", () => {
     expect(GmsStateAnnotation.spec).toBeDefined();
   });
 
-
-
   it("GmsState type is usable", () => {
     // Type-level test: verify the state shape compiles
     const state: Partial<GmsState> = {

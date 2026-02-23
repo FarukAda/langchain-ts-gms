@@ -18,9 +18,9 @@ export const ZERO_VEC: number[] = new Array(TEST_VEC_DIM).fill(0) as number[];
 export function mockEmbeddings(): EmbeddingsInterface {
   return {
     embedQuery: vi.fn().mockResolvedValue(ZERO_VEC),
-    embedDocuments: vi.fn().mockImplementation((docs: string[]) =>
-      Promise.resolve(docs.map(() => [...ZERO_VEC])),
-    ),
+    embedDocuments: vi
+      .fn()
+      .mockImplementation((docs: string[]) => Promise.resolve(docs.map(() => [...ZERO_VEC]))),
   };
 }
 
@@ -171,7 +171,9 @@ export const DEFAULT_DECOMPOSITION = {
  *
  * @param output - custom decomposition output; defaults to DEFAULT_DECOMPOSITION
  */
-export function mockChatModel(output?: { tasks: Array<{ description: string; priority: string; subTasks: unknown[] }> }) {
+export function mockChatModel(output?: {
+  tasks: Array<{ description: string; priority: string; subTasks: unknown[] }>;
+}) {
   const decomposition = output ?? DEFAULT_DECOMPOSITION;
   return {
     withStructuredOutput: vi.fn().mockReturnValue({

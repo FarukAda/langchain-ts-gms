@@ -43,10 +43,7 @@ describe("createListTasksTool", () => {
   });
 
   it("filters tasks by priority", async () => {
-    const tasks = [
-      makeTask({ priority: "high" }),
-      makeTask({ priority: "low" }),
-    ];
+    const tasks = [makeTask({ priority: "high" }), makeTask({ priority: "low" })];
     const goal = baseGoal(tasks);
     const tool = createListTasksTool(createToolDeps(GOAL_ID, goal));
     const raw = await tool.invoke({ goalId: GOAL_ID, priority: ["high"] });
@@ -56,9 +53,7 @@ describe("createListTasksTool", () => {
   });
 
   it("respects pagination (limit and offset)", async () => {
-    const tasks = Array.from({ length: 5 }, (_, i) =>
-      makeTask({ description: `Task ${i}` }),
-    );
+    const tasks = Array.from({ length: 5 }, (_, i) => makeTask({ description: `Task ${i}` }));
     const goal = baseGoal(tasks);
     const tool = createListTasksTool(createToolDeps(GOAL_ID, goal));
     const raw = await tool.invoke({ goalId: GOAL_ID, limit: 2, offset: 1 });

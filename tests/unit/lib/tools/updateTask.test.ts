@@ -15,11 +15,11 @@ describe("createUpdateTaskTool", () => {
   it("succeeds with valid status transition (pending → in_progress)", async () => {
     const goal = baseGoal([makeTask({ id: TASK_ID })]);
     const tool = createUpdateTaskTool(createToolDeps(GOAL_ID, goal));
-    const raw = (await tool.invoke({
+    const raw = await tool.invoke({
       goalId: GOAL_ID,
       taskId: TASK_ID,
       status: "in_progress",
-    }));
+    });
     const result = JSON.parse(raw) as { task: { status: string } };
     expect(result.task.status).toBe("in_progress");
   });
@@ -52,13 +52,13 @@ describe("createUpdateTaskTool", () => {
   it("updates result and error fields on a task", async () => {
     const goal = baseGoal([makeTask({ id: TASK_ID, status: "in_progress" })]);
     const tool = createUpdateTaskTool(createToolDeps(GOAL_ID, goal));
-    const raw = (await tool.invoke({
+    const raw = await tool.invoke({
       goalId: GOAL_ID,
       taskId: TASK_ID,
       status: "failed",
       result: "partial output",
       error: "timeout exceeded",
-    }));
+    });
     const result = JSON.parse(raw) as { task: Task };
     expect(result.task.status).toBe("failed");
     expect(result.task.result).toBe("partial output");
@@ -70,11 +70,11 @@ describe("createUpdateTaskTool", () => {
     const parent = makeTask({ id: TASK_ID, subTasks: [child] });
     const goal = baseGoal([parent]);
     const tool = createUpdateTaskTool(createToolDeps(GOAL_ID, goal));
-    const raw = (await tool.invoke({
+    const raw = await tool.invoke({
       goalId: GOAL_ID,
       taskId: CHILD_ID,
       status: "in_progress",
-    }));
+    });
     const result = JSON.parse(raw) as { task: { status: string } };
     expect(result.task.status).toBe("in_progress");
   });

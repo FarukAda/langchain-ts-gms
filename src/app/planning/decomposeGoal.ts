@@ -3,10 +3,7 @@ import { RESPONSE_CONTRACT_VERSION } from "../../domain/contracts.js";
 import type { GoalMemoryRepository } from "../../infra/vector/goalMemoryRepository.js";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import {
-  DecompositionOutputSchema,
-  type DecomposedTask,
-} from "./decompositionSchema.js";
+import { DecompositionOutputSchema, type DecomposedTask } from "./decompositionSchema.js";
 
 export interface DecomposeResult {
   tasks: Task[];
@@ -82,7 +79,9 @@ function buildDecompositionPrompt(
   const capSection =
     capabilities.length > 0
       ? `\n\nRelevant existing capabilities that may inform your decomposition:\n${capabilities
-          .map((c, i) => `${i + 1}. ${c.goal.description} (relevance: ${(c.score * 100).toFixed(0)}%)`)
+          .map(
+            (c, i) => `${i + 1}. ${c.goal.description} (relevance: ${(c.score * 100).toFixed(0)}%)`,
+          )
           .join("\n")}`
       : "";
 
@@ -166,9 +165,10 @@ function hydrateTasks(
     const deps = prevIds.length > 0 ? [prevIds[prevIds.length - 1]!] : [];
     prevIds.push(taskId);
 
-    const subTasks = dt.subTasks.length > 0
-      ? hydrateTasks(dt.subTasks, dt.priority ?? defaultPriority, taskId)
-      : [];
+    const subTasks =
+      dt.subTasks.length > 0
+        ? hydrateTasks(dt.subTasks, dt.priority ?? defaultPriority, taskId)
+        : [];
 
     const task: Task = {
       id: taskId,

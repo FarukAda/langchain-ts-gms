@@ -28,7 +28,9 @@ function makeTask(id: string, desc: string, opts: Partial<Task> = {}): Task {
     ...(opts.acceptanceCriteria !== undefined && { acceptanceCriteria: opts.acceptanceCriteria }),
     ...(opts.expectedOutput !== undefined && { expectedOutput: opts.expectedOutput }),
     ...(opts.riskLevel !== undefined && { riskLevel: opts.riskLevel }),
-    ...(opts.estimatedComplexity !== undefined && { estimatedComplexity: opts.estimatedComplexity }),
+    ...(opts.estimatedComplexity !== undefined && {
+      estimatedComplexity: opts.estimatedComplexity,
+    }),
     ...(opts.rationale !== undefined && { rationale: opts.rationale }),
   };
 }

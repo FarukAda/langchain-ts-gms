@@ -25,7 +25,7 @@ describe("createSearchTasksTool", () => {
       makeTask({ id: "550e8400-e29b-41d4-a716-446655440002", description: "Write tests" }),
     ]);
     const tool = createSearchTasksTool(createSubstringDeps(GOAL_ID, goal));
-    const raw = (await tool.invoke({ goalId: GOAL_ID, query: "deploy" }));
+    const raw = await tool.invoke({ goalId: GOAL_ID, query: "deploy" });
     const result = JSON.parse(raw) as { items: Task[]; total: number };
     expect(result.total).toBe(1);
     expect(result.items[0]!.description).toBe("Deploy to production");
@@ -37,10 +37,10 @@ describe("createSearchTasksTool", () => {
       makeTask({ id: "550e8400-e29b-41d4-a716-446655440002", status: "pending" }),
     ]);
     const tool = createSearchTasksTool(createSubstringDeps(GOAL_ID, goal));
-    const raw = (await tool.invoke({
+    const raw = await tool.invoke({
       goalId: GOAL_ID,
       status: ["completed"],
-    }));
+    });
     const result = JSON.parse(raw) as { items: Task[]; total: number };
     expect(result.total).toBe(1);
     expect(result.items[0]!.status).toBe("completed");
@@ -55,10 +55,10 @@ describe("createSearchTasksTool", () => {
       makeTask({ id: "550e8400-e29b-41d4-a716-446655440002", dependencies: [] }),
     ]);
     const tool = createSearchTasksTool(createSubstringDeps(GOAL_ID, goal));
-    const raw = (await tool.invoke({
+    const raw = await tool.invoke({
       goalId: GOAL_ID,
       hasDependencies: true,
-    }));
+    });
     const result = JSON.parse(raw) as { items: Task[]; total: number };
     expect(result.total).toBe(1);
     expect(result.items[0]!.dependencies.length).toBeGreaterThan(0);
@@ -67,7 +67,7 @@ describe("createSearchTasksTool", () => {
   it("returns empty results when no tasks match", async () => {
     const goal = goalWith([makeTask({ description: "Setup database" })]);
     const tool = createSearchTasksTool(createSubstringDeps(GOAL_ID, goal));
-    const raw = (await tool.invoke({ goalId: GOAL_ID, query: "xyz-no-match" }));
+    const raw = await tool.invoke({ goalId: GOAL_ID, query: "xyz-no-match" });
     const result = JSON.parse(raw) as { items: Task[]; total: number };
     expect(result.total).toBe(0);
     expect(result.items).toEqual([]);
@@ -85,7 +85,7 @@ describe("createSearchTasksTool", () => {
     });
     const goal = goalWith([parent]);
     const tool = createSearchTasksTool(createSubstringDeps(GOAL_ID, goal));
-    const raw = (await tool.invoke({ goalId: GOAL_ID, query: "deploy" }));
+    const raw = await tool.invoke({ goalId: GOAL_ID, query: "deploy" });
     const result = JSON.parse(raw) as { items: Task[]; total: number };
     expect(result.total).toBe(1);
     expect(result.items[0]!.description).toBe("Deploy step child");
@@ -93,7 +93,11 @@ describe("createSearchTasksTool", () => {
 
   it("returns all matching tasks when no query is provided", async () => {
     const tasks = [
-      makeTask({ id: "550e8400-e29b-41d4-a716-446655440001", status: "completed", description: "A" }),
+      makeTask({
+        id: "550e8400-e29b-41d4-a716-446655440001",
+        status: "completed",
+        description: "A",
+      }),
       makeTask({ id: "550e8400-e29b-41d4-a716-446655440002", status: "pending", description: "B" }),
     ];
     const goal = goalWith(tasks);
@@ -108,8 +112,16 @@ describe("createSearchTasksTool", () => {
 
   it("filters search results by type", async () => {
     const tasks = [
-      makeTask({ id: "550e8400-e29b-41d4-a716-446655440001", description: "Investigate API", type: "research" }),
-      makeTask({ id: "550e8400-e29b-41d4-a716-446655440002", description: "Deploy API", type: "action" }),
+      makeTask({
+        id: "550e8400-e29b-41d4-a716-446655440001",
+        description: "Investigate API",
+        type: "research",
+      }),
+      makeTask({
+        id: "550e8400-e29b-41d4-a716-446655440002",
+        description: "Deploy API",
+        type: "action",
+      }),
     ];
     const goal = goalWith(tasks);
     const tool = createSearchTasksTool(createSubstringDeps(GOAL_ID, goal));
@@ -123,7 +135,10 @@ describe("createSearchTasksTool", () => {
 
   it("uses embedding-based semantic search when embeddings are provided", async () => {
     const tasks = [
-      makeTask({ id: "550e8400-e29b-41d4-a716-446655440001", description: "Delete the database backups" }),
+      makeTask({
+        id: "550e8400-e29b-41d4-a716-446655440001",
+        description: "Delete the database backups",
+      }),
       makeTask({ id: "550e8400-e29b-41d4-a716-446655440002", description: "Clean up old logs" }),
     ];
     const goal = goalWith(tasks);
@@ -132,7 +147,7 @@ describe("createSearchTasksTool", () => {
     // but not "Delete the database backups"
     const queryVec = [1.0, 0.0, 0.0];
     const taskVecs = [
-      [0.1, 0.9, 0.0],  // Low similarity to query (delete backups)
+      [0.1, 0.9, 0.0], // Low similarity to query (delete backups)
       [0.95, 0.05, 0.0], // High similarity to query (clean up logs)
     ];
 

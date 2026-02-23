@@ -42,7 +42,16 @@ export {
   type HumanApprovalOptions,
 } from "../app/governance/guardrails.js";
 export { RESPONSE_CONTRACT_VERSION } from "../domain/contracts.js";
-export type { Goal, Task, Priority, TaskStatus, TaskType, RiskLevel, Complexity, CapabilityVector } from "../domain/contracts.js";
+export type {
+  Goal,
+  Task,
+  Priority,
+  TaskStatus,
+  TaskType,
+  RiskLevel,
+  Complexity,
+  CapabilityVector,
+} from "../domain/contracts.js";
 export { TaskTypeSchema, RiskLevelSchema, ComplexitySchema } from "../domain/contracts.js";
 export { GmsStateAnnotation, type GmsState } from "../app/state/schema.js";
 export { type AllGmsTools } from "./types.js";

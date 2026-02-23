@@ -1,10 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Goal, Task } from "../../../../src/domain/contracts.js";
-import {
-  mockEmbeddings,
-  createMockRepos,
-  mockChatModel,
-} from "../../../helpers/mockRepository.js";
+import { mockEmbeddings, createMockRepos, mockChatModel } from "../../../helpers/mockRepository.js";
 
 // Mock the workflow module to avoid compiling the real graph
 const mockWorkflowInvoke = vi.fn();
@@ -19,14 +15,11 @@ vi.mock("@langchain/langgraph", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
     ...actual,
-    isGraphInterrupt: (err: unknown) =>
-      err instanceof Error && err.message === "GRAPH_INTERRUPT",
+    isGraphInterrupt: (err: unknown) => err instanceof Error && err.message === "GRAPH_INTERRUPT",
   };
 });
 
-const { createGmsPlanTool, createPlan } = await import(
-  "../../../../src/lib/tools/planGoal.js"
-);
+const { createGmsPlanTool, createPlan } = await import("../../../../src/lib/tools/planGoal.js");
 
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
@@ -219,10 +212,7 @@ describe("planGoal", () => {
         humanApprovalPending: false,
       });
 
-      const result = await createPlan(
-        { goalDescription: "Direct plan" },
-        baseDeps,
-      );
+      const result = await createPlan({ goalDescription: "Direct plan" }, baseDeps);
       expect(result.goalId).toBeDefined();
       expect(result.status).toBe("planned");
     });
@@ -230,10 +220,7 @@ describe("planGoal", () => {
     it("handles errors gracefully", async () => {
       mockWorkflowInvoke.mockRejectedValue(new Error("Direct error"));
 
-      const result = await createPlan(
-        { goalDescription: "Failing direct plan" },
-        baseDeps,
-      );
+      const result = await createPlan({ goalDescription: "Failing direct plan" }, baseDeps);
       expect(result.status).toBe("failed");
       expect(result.error).toBe("Direct error");
     });
@@ -241,10 +228,7 @@ describe("planGoal", () => {
     it("handles non-Error throws", async () => {
       mockWorkflowInvoke.mockRejectedValue("string-error");
 
-      const result = await createPlan(
-        { goalDescription: "String throw" },
-        baseDeps,
-      );
+      const result = await createPlan({ goalDescription: "String throw" }, baseDeps);
       expect(result.status).toBe("failed");
       expect(result.error).toBe("string-error");
     });

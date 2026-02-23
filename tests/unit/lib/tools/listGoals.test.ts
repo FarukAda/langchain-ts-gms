@@ -34,7 +34,7 @@ describe("createListGoalsTool", () => {
       chatModel: mockChatModel(),
       decomposeOptions: { topK: 1, maxDepth: 0 },
     });
-    const raw = (await tool.invoke({}));
+    const raw = await tool.invoke({});
     const result = JSON.parse(raw) as { items: unknown[]; total: number };
     expect(result.total).toBe(2);
     expect(result.items.length).toBe(2);
@@ -55,7 +55,7 @@ describe("createListGoalsTool", () => {
       chatModel: mockChatModel(),
       decomposeOptions: { topK: 1, maxDepth: 0 },
     });
-    const raw = (await tool.invoke({}));
+    const raw = await tool.invoke({});
     const result = JSON.parse(raw) as { items: unknown[]; total: number };
     expect(result.total).toBe(0);
     expect(result.items).toEqual([]);
@@ -77,7 +77,7 @@ describe("createListGoalsTool", () => {
       chatModel: mockChatModel(),
       decomposeOptions: { topK: 1, maxDepth: 0 },
     });
-    const raw = (await tool.invoke({ status: "completed" }));
+    const raw = await tool.invoke({ status: "completed" });
     const result = JSON.parse(raw) as { items: Array<{ status: string }>; total: number };
     expect(result.total).toBe(1);
     expect(result.items[0]!.status).toBe("completed");
@@ -86,9 +86,7 @@ describe("createListGoalsTool", () => {
   it("uses search when query is provided", async () => {
     const goal = makeGoal({ id: "550e8400-e29b-41d4-a716-446655440001" });
     const { goalRepo, capRepo } = createMockRepos([]);
-    (goalRepo.search as ReturnType<typeof vi.fn>).mockResolvedValue([
-      { goal, score: 0.9 },
-    ]);
+    (goalRepo.search as ReturnType<typeof vi.fn>).mockResolvedValue([{ goal, score: 0.9 }]);
     const tool = createListGoalsTool({
       goalRepository: goalRepo,
       capabilityRepository: capRepo,
@@ -96,7 +94,7 @@ describe("createListGoalsTool", () => {
       chatModel: mockChatModel(),
       decomposeOptions: { topK: 1, maxDepth: 0 },
     });
-    const raw = (await tool.invoke({ query: "test" }));
+    const raw = await tool.invoke({ query: "test" });
     const result = JSON.parse(raw) as { items: Array<{ id: string }>; total: number };
     expect(result.total).toBe(1);
     const searchFn = (goalRepo as unknown as { search: ReturnType<typeof vi.fn> }).search;
@@ -121,8 +119,13 @@ describe("createListGoalsTool", () => {
       chatModel: mockChatModel(),
       decomposeOptions: { topK: 1, maxDepth: 0 },
     });
-    const raw = (await tool.invoke({ limit: 2, offset: 2 }));
-    const result = JSON.parse(raw) as { items: unknown[]; total: number; limit: number; offset: number };
+    const raw = await tool.invoke({ limit: 2, offset: 2 });
+    const result = JSON.parse(raw) as {
+      items: unknown[];
+      total: number;
+      limit: number;
+      offset: number;
+    };
     expect(result.items.length).toBe(2);
     expect(result.limit).toBe(2);
     expect(result.offset).toBe(2);

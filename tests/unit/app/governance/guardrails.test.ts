@@ -20,26 +20,21 @@ function makeTask(overrides: Partial<Task> = {}): Task {
 
 describe("guardrails", () => {
   it("allows safe tasks", () => {
-    const result = checkGuardrail([
-      makeTask({ description: "Analyze logs" }),
-    ]);
+    const result = checkGuardrail([makeTask({ description: "Analyze logs" })]);
     expect(result.allowed).toBe(true);
   });
 
   it("blocks forbidden patterns", () => {
-    const result = checkGuardrail([
-      makeTask({ description: "Delete production database" }),
-    ]);
+    const result = checkGuardrail([makeTask({ description: "Delete production database" })]);
     expect(result.allowed).toBe(false);
     if (result.allowed) throw new Error("unreachable");
     expect(result.reason).toContain("delete production");
   });
 
   it("blocks custom forbidden patterns", () => {
-    const result = checkGuardrail(
-      [makeTask({ description: "run my-custom-danger command" })],
-      { forbiddenPatterns: ["my-custom-danger"] },
-    );
+    const result = checkGuardrail([makeTask({ description: "run my-custom-danger command" })], {
+      forbiddenPatterns: ["my-custom-danger"],
+    });
     expect(result.allowed).toBe(false);
   });
 
@@ -76,9 +71,7 @@ describe("guardrails", () => {
 
   it("uses pre-flattened tasks when provided", () => {
     const tasks = [makeTask()];
-    const preFlat = Array.from({ length: 15 }, (_, i) =>
-      makeTask({ id: i.toString() }),
-    );
+    const preFlat = Array.from({ length: 15 }, (_, i) => makeTask({ id: i.toString() }));
     expect(requiresHumanApproval(tasks, {}, preFlat)).toBe(true);
   });
 
@@ -151,10 +144,7 @@ describe("evaluateGuardrails", () => {
     const tasks = [
       makeTask({
         id: "1",
-        subTasks: [
-          makeTask({ id: "1a" }),
-          makeTask({ id: "1b" }),
-        ],
+        subTasks: [makeTask({ id: "1a" }), makeTask({ id: "1b" })],
       }),
       makeTask({ id: "2" }),
     ];
