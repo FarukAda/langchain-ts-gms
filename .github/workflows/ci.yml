@@ -58,6 +58,9 @@ jobs:
       OLLAMA_EMBEDDING_MODEL: nomic-embed-text
       OLLAMA_CHAT_MODEL: llama3.2:3b
       GMS_AGENT_TEST: "1"
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: Checkout
