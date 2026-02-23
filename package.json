@@ -1,0 +1,120 @@
+{
+  "name": "@farukada/langchain-ts-gms",
+  "version": "0.1.0",
+  "description": "Vector-centric Goal Management System built with LangChain TypeScript and LangGraph",
+  "license": "MIT",
+  "author": "Faruk Ada <info@farukada.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FarukAda/langchain-ts-gms.git"
+  },
+  "bugs": {
+    "url": "https://github.com/FarukAda/langchain-ts-gms/issues"
+  },
+  "homepage": "https://github.com/FarukAda/langchain-ts-gms#readme",
+  "keywords": [
+    "langchain",
+    "langgraph",
+    "goal-management",
+    "task-planning",
+    "vector-search",
+    "qdrant",
+    "ollama",
+    "ai-agent",
+    "autonomous-agents",
+    "structured-output",
+    "dag",
+    "typescript"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "main": "dist/lib/index.js",
+  "types": "dist/lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/lib/index.d.ts",
+      "default": "./dist/lib/index.js"
+    },
+    "./tool": {
+      "types": "./dist/lib/gmsTool.d.ts",
+      "default": "./dist/lib/gmsTool.js"
+    },
+    "./tools/*": {
+      "types": "./dist/lib/tools/*.d.ts",
+      "default": "./dist/lib/tools/*.js"
+    },
+    "./helpers": {
+      "types": "./dist/lib/helpers.d.ts",
+      "default": "./dist/lib/helpers.js"
+    },
+    "./types": {
+      "types": "./dist/lib/types.d.ts",
+      "default": "./dist/lib/types.js"
+    },
+    "./schemas/planning": {
+      "types": "./dist/lib/schemas/planningSchemas.d.ts",
+      "default": "./dist/lib/schemas/planningSchemas.js"
+    },
+    "./schemas/lifecycle": {
+      "types": "./dist/lib/schemas/lifecycleSchemas.d.ts",
+      "default": "./dist/lib/schemas/lifecycleSchemas.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint src tests",
+    "lint:fix": "eslint --fix src tests",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "test": "vitest run tests/unit",
+    "test:ci": "cross-env CI=true vitest run tests/unit",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage tests/unit",
+    "test:agent": "cross-env GMS_AGENT_TEST=1 OLLAMA_HOST=http://127.0.0.1:11434 QDRANT_URL=http://localhost:6333 vitest run tests/agent",
+    "allure:generate": "npx rimraf allure-report && npx allure generate -o allure-report",
+    "allure:open": "npx allure open allure-report",
+    "test:allure": "npx rimraf allure-results && npm run test && npm run test:agent && npm run allure:generate && npm run allure:open",
+    "typecheck": "tsc --noEmit",
+    "docker:up": "docker compose up -d qdrant && docker compose --profile ollama up -d ollama",
+    "docker:down": "docker compose down"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@langchain/core": "^1.1.27",
+    "@langchain/langgraph": "^1.1.5",
+    "@langchain/ollama": "^1.2.4",
+    "@langchain/qdrant": "^1.0.1",
+    "@qdrant/qdrant-js": "^1.17.0",
+    "langchain": "^1.2.25",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^4.0.18",
+    "@vitest/ui": "^4.0.18",
+    "allure-js-commons": "^3.4.5",
+    "allure-vitest": "^3.4.5",
+    "cross-env": "^10.1.0",
+    "eslint": "^10.0.1",
+    "prettier": "^3.8.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.56.0",
+    "vitest": "^4.0.18"
+  },
+  "overrides": {
+    "minimatch": ">=10.2.1"
+  }
+}

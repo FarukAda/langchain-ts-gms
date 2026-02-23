@@ -1,0 +1,181 @@
+name: CI / Integration / Publish
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  # ── Stage 1: Fast validation ──────────────────────────────────────
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Build
+        run: npm run build
+
+      - name: Test (CI-safe suites)
+        run: npm run test:ci
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high --omit=dev
+
+  # ── Stage 2: Agent integration tests (main only) ──────────────────
+  integration-agent:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      QDRANT_URL: http://localhost:6333
+      OLLAMA_HOST: http://127.0.0.1:11434
+      OLLAMA_EMBEDDING_MODEL: nomic-embed-text
+      OLLAMA_CHAT_MODEL: llama3.2:3b
+      GMS_AGENT_TEST: "1"
+    services:
+      qdrant:
+        image: qdrant/qdrant:v1.16.3
+        ports:
+          - 6333:6333
+          - 6334:6334
+        options: >-
+          --health-cmd "wget -qO- http://localhost:6333/readyz || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Wait for Qdrant readiness
+        run: |
+          for i in {1..30}; do
+            if curl -fsS "${QDRANT_URL}/readyz" >/dev/null; then
+              echo "Qdrant is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Qdrant did not become ready in time"
+          exit 1
+
+      - name: Install and start Ollama
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          nohup ollama serve >/tmp/ollama.log 2>&1 &
+          for i in {1..45}; do
+            if curl -fsS "${OLLAMA_HOST}/api/tags" >/dev/null; then
+              echo "Ollama is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Ollama did not become ready in time"
+          cat /tmp/ollama.log || true
+          exit 1
+
+      - name: Pull Ollama models
+        run: |
+          for model in nomic-embed-text llama3.2:3b; do
+            for attempt in 1 2 3; do
+              echo "Pulling ${model} (attempt ${attempt})"
+              if ollama pull "${model}"; then
+                break
+              fi
+              if [ "${attempt}" -eq 3 ]; then
+                echo "Failed to pull ${model} after retries"
+                exit 1
+              fi
+              sleep 5
+            done
+          done
+          ollama list
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run agent tests
+        run: npm run test:agent
+
+      - name: Dump service logs on failure
+        if: failure()
+        run: |
+          echo "===== OLLAMA LOG ====="
+          cat /tmp/ollama.log || true
+
+  # ── Stage 3: Publish to npm (main only, after all tests pass) ─────
+  publish:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: integration-agent
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          gh release create "v${VERSION}" \
+            --title "v${VERSION}" \
+            --generate-notes
