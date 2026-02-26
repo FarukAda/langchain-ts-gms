@@ -9,7 +9,7 @@ const envSchema = z.object({
 
   OLLAMA_HOST: z.url().default("http://localhost:11434"),
   OLLAMA_EMBEDDING_MODEL: z.string().default("nomic-embed-text"),
-  OLLAMA_CHAT_MODEL: z.string().default("llama3.2:3b"),
+  OLLAMA_CHAT_MODEL: z.string().default("qwen3:8b"),
   GMS_OLLAMA_EMBEDDING_MODEL: z.string().optional(),
   GMS_OLLAMA_CHAT_MODEL: z.string().optional(),
 

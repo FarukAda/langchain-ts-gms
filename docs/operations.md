@@ -54,7 +54,7 @@ docker compose --profile ollama up -d ollama
 | `QDRANT_API_KEY`             | No       | -                                      | Needed when Qdrant auth is enabled     |
 | `OLLAMA_HOST`                | No       | `http://localhost:11434`               | Ollama server URL                      |
 | `OLLAMA_EMBEDDING_MODEL`     | No       | `nomic-embed-text`                     | Default embedding model                |
-| `OLLAMA_CHAT_MODEL`          | No       | `llama3.2:3b`                          | Default chat model                     |
+| `OLLAMA_CHAT_MODEL`          | No       | `qwen3:8b`                          | Default chat model                     |
 | `GMS_OLLAMA_EMBEDDING_MODEL` | No       | falls back to `OLLAMA_EMBEDDING_MODEL` | GMS-specific embedding override        |
 | `GMS_OLLAMA_CHAT_MODEL`      | No       | falls back to `OLLAMA_CHAT_MODEL`      | GMS-specific chat model override       |
 | `LANGCHAIN_TRACING_V2`       | No       | `false`                                | Set to `true` to enable tracing        |

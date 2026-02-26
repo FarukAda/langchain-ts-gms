@@ -6,5 +6,5 @@ RUN ollama serve & \
     SERVER_PID=$! && \
     sleep 5 && \
     ollama pull nomic-embed-text && \
-    ollama pull llama3.2:3b && \
+    ollama pull qwen3:8b && \
     kill $SERVER_PID

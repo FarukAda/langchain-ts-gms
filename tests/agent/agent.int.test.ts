@@ -7,7 +7,7 @@
  *
  * Prerequisites:
  *   docker compose --profile ollama up -d
- *   ollama pull nomic-embed-text && ollama pull llama3.2:3b
+ *   ollama pull nomic-embed-text && ollama pull qwen3:8b
  *
  * Run:
  *   npm run test:agent
@@ -315,7 +315,7 @@ const gmsToolErrorMiddleware = createMiddleware({
 
 // ── Test Suite ───────────────────────────────────────────────────────
 
-const CHAT_MODEL = process.env.OLLAMA_CHAT_MODEL ?? "llama3.2:3b";
+const CHAT_MODEL = process.env.OLLAMA_CHAT_MODEL ?? "qwen3:8b";
 
 describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () => {
   let agent: ReturnType<typeof createAgent>;

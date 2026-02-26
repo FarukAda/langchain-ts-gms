@@ -375,7 +375,7 @@ Runtime environment variables:
 | `QDRANT_API_KEY`             | No       | -                                      | Qdrant authentication key                            |
 | `OLLAMA_HOST`                | No       | `http://localhost:11434`               | Ollama server URL                                    |
 | `OLLAMA_EMBEDDING_MODEL`     | No       | `nomic-embed-text`                     | Default embedding model                              |
-| `OLLAMA_CHAT_MODEL`          | No       | `llama3.2:3b`                          | Default chat/planning model                          |
+| `OLLAMA_CHAT_MODEL`          | No       | `qwen3:8b`                             | Default chat/planning model                          |
 | `GMS_OLLAMA_EMBEDDING_MODEL` | No       | falls back to `OLLAMA_EMBEDDING_MODEL` | GMS-specific embedding model override                |
 | `GMS_OLLAMA_CHAT_MODEL`      | No       | falls back to `OLLAMA_CHAT_MODEL`      | GMS-specific chat model override                     |
 | `LANGCHAIN_TRACING_V2`       | No       | `false`                                | LangChain tracing toggle                             |

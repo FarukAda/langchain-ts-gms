@@ -56,7 +56,7 @@ jobs:
       QDRANT_URL: http://localhost:6333
       OLLAMA_HOST: http://127.0.0.1:11434
       OLLAMA_EMBEDDING_MODEL: nomic-embed-text
-      OLLAMA_CHAT_MODEL: llama3.2:3b
+      OLLAMA_CHAT_MODEL: qwen3:8b
       GMS_AGENT_TEST: "1"
     defaults:
       run:
