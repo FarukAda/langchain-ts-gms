@@ -292,4 +292,3 @@ function mapStreamEvent(
       return null;
   }
 }
-

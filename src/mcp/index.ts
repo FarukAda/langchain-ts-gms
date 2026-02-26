@@ -8,8 +8,4 @@
  *
  * @module
  */
-export {
-  createGmsMcpServer,
-  startMcpServer,
-  type GmsMcpServerOptions,
-} from "./server.js";
+export { createGmsMcpServer, startMcpServer, type GmsMcpServerOptions } from "./server.js";

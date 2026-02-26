@@ -209,9 +209,7 @@ export function validateGoalInvariants(goal: Goal): GoalInvariantResult {
     }
     for (const input of t.expectedInputs) {
       if (!available.has(input)) {
-        warnings.push(
-          `Task ${t.id} expects input "${input}" but no direct dependency provides it`,
-        );
+        warnings.push(`Task ${t.id} expects input "${input}" but no direct dependency provides it`);
       }
     }
   }

@@ -1,6 +1,13 @@
 import type { GmsToolDeps } from "../types.js";
 import type { Task } from "../../domain/contracts.js";
-import { getGoalOrThrow, findTaskById, findParentTaskId, matchesFilters, filterTaskTree, paginate } from "../helpers.js";
+import {
+  getGoalOrThrow,
+  findTaskById,
+  findParentTaskId,
+  matchesFilters,
+  filterTaskTree,
+  paginate,
+} from "../helpers.js";
 import { flattenTasks } from "../../domain/taskUtils.js";
 import { ErrorCodes } from "../../infra/observability/tracing.js";
 
@@ -42,9 +49,7 @@ export async function handleListTasks(
     );
   let filtered: Task[];
   if (isFlatMode) {
-    const base = (input.includeSubTasks ?? true)
-      ? flattenTasks(goal.tasks)
-      : goal.tasks;
+    const base = (input.includeSubTasks ?? true) ? flattenTasks(goal.tasks) : goal.tasks;
     filtered = base.filter(predicate);
   } else {
     filtered = filterTaskTree(goal.tasks, predicate);

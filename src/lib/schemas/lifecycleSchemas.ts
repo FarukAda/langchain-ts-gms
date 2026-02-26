@@ -200,14 +200,10 @@ export const ReplanGoalInputSchema = z.object({
       description:
         "How to merge new tasks with existing ones. 'append' (default): keep all existing, add new. 'replace_failed': remove failed tasks, add new. 'replace_all': discard all existing, generate fresh plan.",
     }),
-  linkToLastCompleted: laxBool
-    .nullable()
-    .optional()
-    .default(false)
-    .meta({
-      description:
-        "When true and strategy is 'append', the first new task depends on the last completed task in the existing tree, creating a continuation chain. Ignored for other strategies.",
-    }),
+  linkToLastCompleted: laxBool.nullable().optional().default(false).meta({
+    description:
+      "When true and strategy is 'append', the first new task depends on the last completed task in the existing tree, creating a continuation chain. Ignored for other strategies.",
+  }),
   decomposeOptions: z
     .object({
       topK: laxInt.nullable().optional(),
@@ -286,7 +282,6 @@ export function coerceLifecycleInput<T extends Record<string, unknown>>(raw: T):
       out[key] = Number.isFinite(n) ? Math.trunc(n) : undefined;
       continue;
     }
-
 
     // Recurse one level into decomposeOptions
     if (key === "decomposeOptions") {

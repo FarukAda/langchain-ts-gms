@@ -1,8 +1,5 @@
 import { tool } from "@langchain/core/tools";
-import {
-  ListGoalsInputSchema,
-  coerceLifecycleInput,
-} from "../schemas/lifecycleSchemas.js";
+import { ListGoalsInputSchema, coerceLifecycleInput } from "../schemas/lifecycleSchemas.js";
 import { stripNulls, wrapToolResponse } from "../helpers.js";
 import type { GmsToolDeps } from "../types.js";
 import { handleListGoals } from "../handlers/listGoalsHandler.js";

@@ -88,7 +88,9 @@ async function buildDeps(
     embeddings,
     chatModel,
     ...(options.onTaskReady && { onTaskReady: options.onTaskReady }),
-    ...(options.onPlanRequiresApproval && { onPlanRequiresApproval: options.onPlanRequiresApproval }),
+    ...(options.onPlanRequiresApproval && {
+      onPlanRequiresApproval: options.onPlanRequiresApproval,
+    }),
     ...(options.onGoalCompleted && { onGoalCompleted: options.onGoalCompleted }),
     ...(options.checkpointer !== undefined && { checkpointer: options.checkpointer }),
   };
@@ -106,9 +108,7 @@ function textResult(data: unknown): { content: [{ type: "text"; text: string }] 
  * call {@link startMcpServer} to wire it to stdio, or use
  * `McpServer.connect()` with any supported transport.
  */
-export async function createGmsMcpServer(
-  options: GmsMcpServerOptions = {},
-): Promise<McpServer> {
+export async function createGmsMcpServer(options: GmsMcpServerOptions = {}): Promise<McpServer> {
   const { name = "gms-mcp-server", version = "0.1.0", bootstrap = true } = options;
   const deps = await buildDeps(bootstrap, options);
 
@@ -127,10 +127,7 @@ export async function createGmsMcpServer(
       traceId: z.string().optional().describe("Optional trace ID for observability"),
     },
     async ({ goal, priority, traceId }) => {
-      const result = await createPlan(
-        { goal, priority: priority ?? "medium", traceId },
-        deps,
-      );
+      const result = await createPlan({ goal, priority: priority ?? "medium", traceId }, deps);
       return textResult(result);
     },
   );
@@ -174,7 +171,8 @@ export async function createGmsMcpServer(
       limit: z.number().optional().describe("Max number of goals to return"),
       offset: z.number().optional().describe("Number of goals to skip"),
     },
-    async (input) => textResult(await handleListGoals(deps, stripNulls(coerceLifecycleInput(input)))),
+    async (input) =>
+      textResult(await handleListGoals(deps, stripNulls(coerceLifecycleInput(input)))),
   );
 
   // ── gms_get_task ───────────────────────────────────────────────────────
@@ -211,7 +209,8 @@ export async function createGmsMcpServer(
       limit: z.number().optional().describe("Page size"),
       offset: z.number().optional().describe("Number of items to skip"),
     },
-    async (input) => textResult(await handleListTasks(deps, stripNulls(coerceLifecycleInput(input)))),
+    async (input) =>
+      textResult(await handleListTasks(deps, stripNulls(coerceLifecycleInput(input)))),
   );
 
   // ── gms_search_tasks ───────────────────────────────────────────────────
@@ -228,14 +227,12 @@ export async function createGmsMcpServer(
         .array(z.enum(["research", "action", "validation", "decision"]))
         .optional()
         .describe("Filter by type(s)"),
-      hasDependencies: z
-        .boolean()
-        .optional()
-        .describe("Filter tasks with/without dependencies"),
+      hasDependencies: z.boolean().optional().describe("Filter tasks with/without dependencies"),
       limit: z.number().optional().describe("Page size"),
       offset: z.number().optional().describe("Number of items to skip"),
     },
-    async (input) => textResult(await handleSearchTasks(deps, stripNulls(coerceLifecycleInput(input)))),
+    async (input) =>
+      textResult(await handleSearchTasks(deps, stripNulls(coerceLifecycleInput(input)))),
   );
 
   // ── gms_update_goal ────────────────────────────────────────────────────
@@ -249,10 +246,7 @@ export async function createGmsMcpServer(
         .enum(["pending", "planned", "in_progress", "completed", "failed", "cancelled"])
         .optional()
         .describe("New status"),
-      priority: z
-        .enum(["critical", "high", "medium", "low"])
-        .optional()
-        .describe("New priority"),
+      priority: z.enum(["critical", "high", "medium", "low"]).optional().describe("New priority"),
       tenantId: z.string().optional().describe("Tenant ID for multi-tenancy"),
       metadata: z
         .record(z.string(), z.unknown())
@@ -383,9 +377,7 @@ export async function createGmsMcpServer(
  * node dist/mcp/server.js
  * ```
  */
-export async function startMcpServer(
-  options: GmsMcpServerOptions = {},
-): Promise<void> {
+export async function startMcpServer(options: GmsMcpServerOptions = {}): Promise<void> {
   const server = await createGmsMcpServer(options);
   const transport = new StdioServerTransport();
   await server.connect(transport);

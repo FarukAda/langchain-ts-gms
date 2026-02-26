@@ -45,7 +45,7 @@ export async function handleSearchTasks(
     )
       return false;
     if (input.hasDependencies !== undefined) {
-      if ((t.dependencies.length > 0) !== input.hasDependencies) return false;
+      if (t.dependencies.length > 0 !== input.hasDependencies) return false;
     }
     return true;
   });

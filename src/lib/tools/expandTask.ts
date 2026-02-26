@@ -16,10 +16,7 @@ const ExpandTaskInputSchema = z.object({
           .enum(["critical", "high", "medium", "low"])
           .optional()
           .describe("Priority (inherits parent if omitted)"),
-        expectedInputs: z
-          .array(z.string())
-          .optional()
-          .describe("Named inputs from upstream tasks"),
+        expectedInputs: z.array(z.string()).optional().describe("Named inputs from upstream tasks"),
         providedOutputs: z
           .array(z.string())
           .optional()
@@ -29,7 +26,6 @@ const ExpandTaskInputSchema = z.object({
     .min(1)
     .describe("Sub-tasks to add under the parent task"),
 });
-
 
 /**
  * Creates the `gms_expand_task` tool for dynamic "fan-out" at runtime.

@@ -18,7 +18,13 @@ import {
 import { fireLifecycleHooks } from "../../../src/lib/tools/updateTask.js";
 import { removeFailedTasks, paginate } from "../../../src/lib/helpers.js";
 import { flattenTasks } from "../../../src/domain/taskUtils.js";
-import { makeTask, makeGoal, mockEmbeddings, mockChatModel, createStaticGoalRepo } from "../../helpers/mockRepository.js";
+import {
+  makeTask,
+  makeGoal,
+  mockEmbeddings,
+  mockChatModel,
+  createStaticGoalRepo,
+} from "../../helpers/mockRepository.js";
 import type { GmsToolDeps } from "../../../src/lib/types.js";
 import { setLogSilent } from "../../../src/infra/observability/tracing.js";
 
@@ -153,9 +159,7 @@ describe("fireLifecycleHooks (MCP parity — Fix 2)", () => {
 
     await fireLifecycleHooks(deps, goal, new Set());
     expect(onGoalCompleted).toHaveBeenCalledTimes(1);
-    expect(onGoalCompleted).toHaveBeenCalledWith(
-      expect.objectContaining({ id: GOAL_ID }),
-    );
+    expect(onGoalCompleted).toHaveBeenCalledWith(expect.objectContaining({ id: GOAL_ID }));
   });
 
   it("does not fire onTaskReady for tasks already in prevReadyIds", async () => {
@@ -424,11 +428,7 @@ describe("gms_list_tasks includeSubTasks (MCP parity — Gap 3)", () => {
   it("flat=true, includeSubTasks=true (default): returns all tasks", () => {
     const isFlatMode = true;
     const includeSubTasks = true;
-    const tasks = isFlatMode
-      ? includeSubTasks
-        ? flattenTasks(topLevel)
-        : topLevel
-      : topLevel;
+    const tasks = isFlatMode ? (includeSubTasks ? flattenTasks(topLevel) : topLevel) : topLevel;
 
     expect(tasks).toHaveLength(2); // parent + child
   });
@@ -436,11 +436,7 @@ describe("gms_list_tasks includeSubTasks (MCP parity — Gap 3)", () => {
   it("flat=true, includeSubTasks=false: returns only top-level tasks", () => {
     const isFlatMode = true;
     const includeSubTasks = false;
-    const tasks = isFlatMode
-      ? includeSubTasks
-        ? flattenTasks(topLevel)
-        : topLevel
-      : topLevel;
+    const tasks = isFlatMode ? (includeSubTasks ? flattenTasks(topLevel) : topLevel) : topLevel;
 
     expect(tasks).toHaveLength(1); // only parent
     expect(tasks[0]!.id).toBe(parent.id);
@@ -476,13 +472,14 @@ describe("gms_replan_goal decomposeOptions merge (MCP parity — Gap 4)", () => 
     const inputOpts = undefined;
 
     // When no input decomposeOptions, the server passes deps.decomposeOptions as-is
-    const result = inputOpts !== undefined
-      ? Object.fromEntries(
-          Object.entries({ ...depsOpts, ...(inputOpts as Record<string, unknown>) }).filter(
-            ([, v]) => v != null,
-          ),
-        )
-      : depsOpts;
+    const result =
+      inputOpts !== undefined
+        ? Object.fromEntries(
+            Object.entries({ ...depsOpts, ...(inputOpts as Record<string, unknown>) }).filter(
+              ([, v]) => v != null,
+            ),
+          )
+        : depsOpts;
 
     expect(result).toEqual({ topK: 5, maxDepth: 4 });
   });

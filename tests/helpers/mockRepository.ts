@@ -66,7 +66,11 @@ export function createMockRepos(
         if (storedVersion !== expectedVersion) {
           return Promise.reject(new ConcurrentModificationError(g.id, expectedVersion));
         }
-        stored.set(g.id, { ...g, _version: expectedVersion + 1, updatedAt: new Date().toISOString() });
+        stored.set(g.id, {
+          ...g,
+          _version: expectedVersion + 1,
+          updatedAt: new Date().toISOString(),
+        });
         return Promise.resolve();
       }
       stored.set(g.id, { ...g, updatedAt: new Date().toISOString() });

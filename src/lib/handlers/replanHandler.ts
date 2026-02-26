@@ -60,10 +60,7 @@ export type ReplanOutcome = ReplanResult | ReplanHumanApprovalResult;
  * 4. Applies the chosen merge strategy
  * 5. Persists with optimistic locking
  */
-export async function handleReplan(
-  deps: GmsToolDeps,
-  input: ReplanInput,
-): Promise<ReplanOutcome> {
+export async function handleReplan(deps: GmsToolDeps, input: ReplanInput): Promise<ReplanOutcome> {
   const goal = await getGoalOrThrow(deps.goalRepository, input.goalId);
 
   // ── Dependency check ─────────────────────────────────────────────────
@@ -80,9 +77,7 @@ export async function handleReplan(
     ? { ...deps.decomposeOptions, ...input.decomposeOptions }
     : deps.decomposeOptions;
   const opts: DecomposeOptions | undefined = optsRaw
-    ? (Object.fromEntries(
-        Object.entries(optsRaw).filter(([, v]) => v != null),
-      ) as DecomposeOptions)
+    ? (Object.fromEntries(Object.entries(optsRaw).filter(([, v]) => v != null)) as DecomposeOptions)
     : undefined;
 
   // ── LLM decomposition ───────────────────────────────────────────────
@@ -129,9 +124,7 @@ export async function handleReplan(
     replacedTaskIds.push(...oldFlat.map((t) => t.id));
     nextTasks = generatedTasks;
   } else if (strategy === "replace_failed") {
-    replacedTaskIds.push(
-      ...oldFlat.filter((t) => t.status === "failed").map((t) => t.id),
-    );
+    replacedTaskIds.push(...oldFlat.filter((t) => t.status === "failed").map((t) => t.id));
     const kept = removeFailedTasks(goal.tasks);
     nextTasks = [...kept, ...generatedTasks];
   } else {

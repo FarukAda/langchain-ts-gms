@@ -20,9 +20,7 @@ export { ConcurrentModificationError } from "../domain/errors.js";
 export { TokenBucketLimiter, RateLimitError } from "./rateLimiter.js";
 export { createGmsWorkflow, GMS_NODE_NAMES, type WorkflowDeps } from "../app/graph/workflow.js";
 export type { BaseCheckpointSaver } from "@langchain/langgraph";
-export {
-  QdrantGoalRepository,
-} from "../infra/vector/goalMemoryRepository.js";
+export { QdrantGoalRepository } from "../infra/vector/goalMemoryRepository.js";
 export type {
   IGoalRepository,
   GoalSearchFilter,

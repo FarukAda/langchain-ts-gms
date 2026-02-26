@@ -126,9 +126,7 @@ export async function semanticSearchTasks(
   goalId: string,
 ): Promise<Task[]> {
   const queryEmbedding = await embeddings.embedQuery(query);
-  const descriptions = tasks.map(
-    (t) => `${t.description} ${t.result ?? ""} ${t.error ?? ""}`,
-  );
+  const descriptions = tasks.map((t) => `${t.description} ${t.result ?? ""} ${t.error ?? ""}`);
   const taskEmbeddings = await getOrEmbedTasks(embeddings, goalId, descriptions);
 
   const scored = tasks

@@ -237,7 +237,6 @@ function findToolResult(
   return undefined;
 }
 
-
 /**
  * Assert a specific tool was called, returning its call details.
  * Fails with a descriptive message if the tool was not invoked.
@@ -881,10 +880,9 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
       typeof expandResponse!.totalTaskCount === "number" && expandResponse!.totalTaskCount > 0,
       "Total task count should be positive",
     ).toBe(true);
-    expect(
-      Array.isArray(expandResponse!.executionOrder),
-      "Should include executionOrder",
-    ).toBe(true);
+    expect(Array.isArray(expandResponse!.executionOrder), "Should include executionOrder").toBe(
+      true,
+    );
   }, 300_000);
 
   // ── Scenario 8c: Validate tree after expansion ──────────────────
@@ -1745,8 +1743,7 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     expect(goalStoredStatus, "Goal should be completed from S25").toBe("completed");
 
     const userPrompt =
-      `Update goal ${createdGoalId} status to "pending". ` +
-      `Use the gms_update_goal tool.`;
+      `Update goal ${createdGoalId} status to "pending". ` + `Use the gms_update_goal tool.`;
 
     await allure.step("Send prompt to agent", async () => {
       await attachText("user_prompt", userPrompt);

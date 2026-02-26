@@ -13,7 +13,8 @@ export const createReplanGoalTool = (deps: GmsToolDeps) =>
       const result = await handleReplan(deps, {
         goalId: input.goalId,
         strategy: input.strategy,
-        linkToLastCompleted: input.linkToLastCompleted != null ? Boolean(input.linkToLastCompleted) : undefined,
+        linkToLastCompleted:
+          input.linkToLastCompleted != null ? Boolean(input.linkToLastCompleted) : undefined,
         decomposeOptions: input.decomposeOptions as Record<string, unknown> | undefined,
       });
       return wrapToolResponse(result);

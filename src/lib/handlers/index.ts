@@ -30,10 +30,7 @@ export {
   type UpdateTaskResult,
 } from "./updateHandlers.js";
 
-export {
-  handleGetProgress,
-  type GetProgressResult,
-} from "./getProgressHandler.js";
+export { handleGetProgress, type GetProgressResult } from "./getProgressHandler.js";
 
 export {
   handleExpandTask,

@@ -28,9 +28,7 @@ describe("patchPlanSubtree", () => {
 
   it("passes _version to upsert for optimistic concurrency control", async () => {
     const repo = createStaticGoalRepo(GOAL_ID, goal);
-    const replacement: Task[] = [
-      makeTask({ id: crypto.randomUUID(), description: "New child" }),
-    ];
+    const replacement: Task[] = [makeTask({ id: crypto.randomUUID(), description: "New child" })];
 
     await patchPlanSubtree(repo, {
       goalId: GOAL_ID,
@@ -48,9 +46,7 @@ describe("patchPlanSubtree", () => {
 
   it("throws ConcurrentModificationError on version mismatch", async () => {
     const repo = createStaticGoalRepo(GOAL_ID, goal);
-    const replacement: Task[] = [
-      makeTask({ id: crypto.randomUUID(), description: "New child" }),
-    ];
+    const replacement: Task[] = [makeTask({ id: crypto.randomUUID(), description: "New child" })];
 
     // Simulate a concurrent write that bumps the version
     Object.assign(goal, { _version: 2 });

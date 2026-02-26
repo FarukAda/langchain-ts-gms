@@ -1,11 +1,7 @@
 import type { GmsToolDeps } from "../types.js";
 import type { Goal, Task } from "../../domain/contracts.js";
 import { getGoalOrThrow, findTaskById } from "../helpers.js";
-import {
-  updateTaskById,
-  canTransitionTaskStatus,
-  flattenTasks,
-} from "../../domain/taskUtils.js";
+import { updateTaskById, canTransitionTaskStatus, flattenTasks } from "../../domain/taskUtils.js";
 import { ErrorCodes } from "../../infra/observability/tracing.js";
 import { isTaskReady, fireLifecycleHooks } from "../tools/updateTask.js";
 
@@ -104,9 +100,7 @@ export async function handleUpdateTask(
 
   // Snapshot ready-set BEFORE applying the update
   const prevFlat = flattenTasks(goal.tasks);
-  const prevReadyIds = new Set(
-    prevFlat.filter((t) => isTaskReady(t, prevFlat)).map((t) => t.id),
-  );
+  const prevReadyIds = new Set(prevFlat.filter((t) => isTaskReady(t, prevFlat)).map((t) => t.id));
 
   const tasks = updateTaskById(goal.tasks, input.taskId, (t) => ({
     ...t,

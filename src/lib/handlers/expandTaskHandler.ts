@@ -1,11 +1,7 @@
 import type { GmsToolDeps } from "../types.js";
 import type { Goal, Task } from "../../domain/contracts.js";
 import { getGoalOrThrow, findTaskById } from "../helpers.js";
-import {
-  updateTaskById,
-  flattenTasks,
-  executionOrder,
-} from "../../domain/taskUtils.js";
+import { updateTaskById, flattenTasks, executionOrder } from "../../domain/taskUtils.js";
 
 // ---------------------------------------------------------------------------
 // Expand-Task handler

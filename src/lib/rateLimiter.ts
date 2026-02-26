@@ -68,9 +68,7 @@ export class TokenBucketLimiter {
           return;
         }
         if (Date.now() >= deadline) {
-          reject(
-            new RateLimitError(Math.ceil(msPerToken)),
-          );
+          reject(new RateLimitError(Math.ceil(msPerToken)));
           return;
         }
         setTimeout(check, Math.min(msPerToken, 100));
@@ -88,9 +86,7 @@ export class RateLimitError extends Error {
   readonly retryAfterMs: number;
 
   constructor(retryAfterMs: number) {
-    super(
-      `[GMS_RATE_LIMIT_EXCEEDED] Rate limit exceeded. Retry after ~${retryAfterMs}ms.`,
-    );
+    super(`[GMS_RATE_LIMIT_EXCEEDED] Rate limit exceeded. Retry after ~${retryAfterMs}ms.`);
     this.name = "RateLimitError";
     this.retryAfterMs = retryAfterMs;
   }

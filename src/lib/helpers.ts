@@ -158,4 +158,3 @@ export async function getGoalOrThrow(repo: IGoalRepository, goalId: string): Pro
 export function wrapToolResponse(data: object): string {
   return JSON.stringify({ version: RESPONSE_CONTRACT_VERSION, ...data });
 }
-

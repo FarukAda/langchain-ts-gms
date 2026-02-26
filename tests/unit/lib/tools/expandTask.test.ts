@@ -27,10 +27,7 @@ describe("createExpandTaskTool", () => {
     const raw: string = await tool.invoke({
       goalId: GOAL_ID,
       parentTaskId: PARENT_ID,
-      subTasks: [
-        { description: "Sub-task A" },
-        { description: "Sub-task B" },
-      ],
+      subTasks: [{ description: "Sub-task A" }, { description: "Sub-task B" }],
     });
     const result = JSON.parse(raw) as ExpandResult;
     expect(result.status).toBe("expanded");
@@ -58,11 +55,7 @@ describe("createExpandTaskTool", () => {
     await tool.invoke({
       goalId: GOAL_ID,
       parentTaskId: PARENT_ID,
-      subTasks: [
-        { description: "First" },
-        { description: "Second" },
-        { description: "Third" },
-      ],
+      subTasks: [{ description: "First" }, { description: "Second" }, { description: "Third" }],
     });
     // After expansion, parent should have 3 sub-tasks with sequential deps
     const expanded = goal.tasks[0]!.subTasks;

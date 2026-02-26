@@ -30,7 +30,6 @@ export interface QdrantGoalRepositoryConfig {
   client?: QdrantClient;
 }
 
-
 /**
  * Qdrant-backed implementation of {@link IGoalRepository}.
  * Supports semantic search, filtered retrieval, and deterministic pagination.
@@ -319,4 +318,3 @@ function filterToQdrantFilter(filter?: GoalSearchFilter): object | undefined {
   if (must.length === 0) return undefined;
   return { must };
 }
-

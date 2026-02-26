@@ -120,9 +120,7 @@ describe("createUpdateTaskTool", () => {
       status: "completed",
     });
     expect(onGoalCompleted).toHaveBeenCalledTimes(1);
-    expect(onGoalCompleted).toHaveBeenCalledWith(
-      expect.objectContaining({ id: GOAL_ID }),
-    );
+    expect(onGoalCompleted).toHaveBeenCalledWith(expect.objectContaining({ id: GOAL_ID }));
   });
 
   it("does not crash when a hook throws", async () => {
