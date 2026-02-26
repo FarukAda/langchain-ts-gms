@@ -1,6 +1,6 @@
 {
   "name": "@farukada/langchain-ts-gms",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Vector-centric Goal Management System built with LangChain TypeScript and LangGraph",
   "license": "MIT",
   "author": "Faruk Ada <info@farukada.com>",
