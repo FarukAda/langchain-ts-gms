@@ -1,9 +1,14 @@
 import type { Goal, Task, CapabilityVector } from "../../domain/contracts.js";
 import { RESPONSE_CONTRACT_VERSION } from "../../domain/contracts.js";
-import type { GoalMemoryRepository } from "../../infra/vector/goalMemoryRepository.js";
+import type { IGoalRepository } from "../../domain/ports.js";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import { DecompositionOutputSchema, type DecomposedTask } from "./decompositionSchema.js";
+import {
+  DecompositionOutputSchema,
+  DecomposedTaskSchema,
+  type DecomposedTask,
+} from "./decompositionSchema.js";
+import { z } from "zod/v4";
 
 export interface DecomposeResult {
   tasks: Task[];
@@ -23,6 +28,26 @@ export interface DecomposeOptions {
     capabilities: Array<{ goal: Goal; score: number }>,
     maxDepth: number,
   ) => string;
+  /**
+   * Optional custom Zod object schema to merge with the base Task schema.
+   * The LLM will be instructed to output these additional fields.
+   * Use `z.infer` on this schema to get the typed custom fields.
+   *
+   * @example
+   * ```ts
+   * customTaskSchema: z.object({
+   *   dockerImage: z.string().describe("Docker image to use"),
+   *   timeout: z.number().describe("Timeout in seconds"),
+   * })
+   * ```
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- consumer-provided schema can have any shape
+  customTaskSchema?: z.ZodObject<any>;
+  /**
+   * Maximum time (ms) to wait for the LLM to respond.
+   * Defaults to 60 000 (60 s). Prevents indefinite hangs from stalled models.
+   */
+  timeoutMs?: number;
 }
 
 /**
@@ -32,7 +57,7 @@ export interface DecomposeOptions {
  */
 export async function decomposeGoal(
   goal: Goal,
-  repository: GoalMemoryRepository,
+  repository: IGoalRepository,
   embeddings: EmbeddingsInterface,
   chatModel: BaseChatModel,
   options: DecomposeOptions = {},
@@ -142,10 +167,32 @@ async function llmDecompose(
     ? options.promptTemplate(goal, capabilities, maxDepth)
     : buildDecompositionPrompt(goal, capabilities, maxDepth);
 
-  const structuredModel = chatModel.withStructuredOutput(DecompositionOutputSchema);
-  const result = await structuredModel.invoke(prompt);
+  // Build the structured output schema, merging custom fields if provided
+  const taskSchema = options.customTaskSchema
+    ? DecomposedTaskSchema.extend(options.customTaskSchema.shape as Record<string, z.ZodType>)
+    : DecomposedTaskSchema;
 
-  return hydrateTasks(result.tasks, goal.priority);
+  const outputSchema = options.customTaskSchema
+    ? z.object({
+        tasks: z
+          .array(taskSchema)
+          .min(2)
+          .meta({
+            description:
+              "Top-level tasks needed to accomplish the goal. " +
+              "Break the goal into at least 2 clear, actionable steps. " +
+              "Each task may have subTasks for further breakdown.",
+          }),
+      })
+    : DecompositionOutputSchema;
+
+  const structuredModel = chatModel.withStructuredOutput(outputSchema);
+  const timeoutMs = options.timeoutMs ?? 60_000;
+  const result = await structuredModel.invoke(prompt, {
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+
+  return hydrateTasks(result.tasks as DecomposedTask[], goal.priority, options.customTaskSchema);
 }
 
 /**
@@ -155,6 +202,8 @@ async function llmDecompose(
 function hydrateTasks(
   decomposed: DecomposedTask[],
   defaultPriority: Goal["priority"],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- consumer-provided schema
+  customTaskSchema?: z.ZodObject<any>,
   parentId?: string,
 ): Task[] {
   const tasks: Task[] = [];
@@ -167,7 +216,7 @@ function hydrateTasks(
 
     const subTasks =
       dt.subTasks.length > 0
-        ? hydrateTasks(dt.subTasks, dt.priority ?? defaultPriority, taskId)
+        ? hydrateTasks(dt.subTasks, dt.priority ?? defaultPriority, customTaskSchema, taskId)
         : [];
 
     const task: Task = {
@@ -183,10 +232,32 @@ function hydrateTasks(
       ...(dt.riskLevel && { riskLevel: dt.riskLevel }),
       ...(dt.estimatedComplexity && { estimatedComplexity: dt.estimatedComplexity }),
       ...(dt.rationale && { rationale: dt.rationale }),
+      ...(customTaskSchema && { customFields: extractCustomFields(dt, customTaskSchema) }),
+      ...(dt.expectedInputs?.length && { expectedInputs: dt.expectedInputs }),
+      ...(dt.providedOutputs?.length && { providedOutputs: dt.providedOutputs }),
     };
     if (parentId !== undefined) task.parentId = parentId;
     tasks.push(task);
   }
 
   return tasks;
+}
+
+/**
+ * Extracts custom fields from a decomposed task based on the consumer-provided schema.
+ * Only includes fields that are defined in the custom schema and present in the task.
+ */
+function extractCustomFields(
+  dt: Record<string, unknown>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- consumer-provided schema
+  schema: z.ZodObject<any>,
+): Record<string, unknown> {
+  const customKeys = Object.keys(schema.shape as Record<string, unknown>);
+  const result: Record<string, unknown> = {};
+  for (const key of customKeys) {
+    if (key in dt && dt[key] !== undefined) {
+      result[key] = dt[key];
+    }
+  }
+  return result;
 }

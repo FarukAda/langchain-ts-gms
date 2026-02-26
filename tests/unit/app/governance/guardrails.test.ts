@@ -48,7 +48,7 @@ describe("guardrails", () => {
   });
 
   it("requires human approval for many tasks", () => {
-    const many = Array.from({ length: 11 }, (_, i) =>
+    const many = Array.from({ length: 51 }, (_, i) =>
       makeTask({ id: i.toString(), description: `Task ${i}` }),
     );
     expect(requiresHumanApproval(many)).toBe(true);
@@ -71,18 +71,18 @@ describe("guardrails", () => {
 
   it("uses pre-flattened tasks when provided", () => {
     const tasks = [makeTask()];
-    const preFlat = Array.from({ length: 15 }, (_, i) => makeTask({ id: i.toString() }));
+    const preFlat = Array.from({ length: 51 }, (_, i) => makeTask({ id: i.toString() }));
     expect(requiresHumanApproval(tasks, {}, preFlat)).toBe(true);
   });
 
   // --- Risk-based HITL tests ---
 
-  it("requires human approval for high riskLevel tasks", () => {
+  it("does NOT require human approval for high riskLevel tasks", () => {
     const tasks = [
       makeTask({ id: "1", riskLevel: "high" }),
       makeTask({ id: "2", riskLevel: "low" }),
     ];
-    expect(requiresHumanApproval(tasks)).toBe(true);
+    expect(requiresHumanApproval(tasks)).toBe(false);
   });
 
   it("requires human approval for critical riskLevel tasks", () => {
@@ -90,11 +90,12 @@ describe("guardrails", () => {
     expect(requiresHumanApproval(tasks)).toBe(true);
   });
 
-  it("does NOT require human approval for low/medium riskLevel tasks", () => {
+  it("does NOT require human approval for low/medium/high riskLevel tasks", () => {
     const tasks = [
       makeTask({ id: "1", riskLevel: "low" }),
       makeTask({ id: "2", riskLevel: "medium" }),
-      makeTask({ id: "3" }), // no riskLevel (undefined)
+      makeTask({ id: "3", riskLevel: "high" }),
+      makeTask({ id: "4" }), // no riskLevel (undefined)
     ];
     expect(requiresHumanApproval(tasks)).toBe(false);
   });
@@ -113,13 +114,13 @@ describe("evaluateGuardrails", () => {
   });
 
   it("returns allowed + needs approval for many tasks", () => {
-    const tasks = Array.from({ length: 12 }, (_, i) =>
+    const tasks = Array.from({ length: 51 }, (_, i) =>
       makeTask({ id: i.toString(), description: `Task ${i}` }),
     );
     const result = evaluateGuardrails(tasks);
     expect(result.check.allowed).toBe(true);
     expect(result.needsHumanApproval).toBe(true);
-    expect(result.flatCount).toBe(12);
+    expect(result.flatCount).toBe(51);
   });
 
   it("returns blocked + no approval when forbidden pattern detected", () => {

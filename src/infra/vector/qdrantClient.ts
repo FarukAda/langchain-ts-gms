@@ -1,7 +1,9 @@
 import { QdrantClient } from "@qdrant/qdrant-js";
 import { loadEnv } from "../../config/env.js";
 
+/** Default Qdrant collection name for goal embeddings and hierarchical task data. */
 export const GOALS_COLLECTION = "gms_goals";
+/** Default Qdrant collection name for capability embeddings used in semantic task matching. */
 export const CAPABILITIES_COLLECTION = "gms_capabilities";
 
 const PAYLOAD_INDEX_FIELDS = [
@@ -12,11 +14,13 @@ const PAYLOAD_INDEX_FIELDS = [
   { field_name: "metadata.parent_goal_id", field_schema: "keyword" as const },
 ];
 
+/** Connection configuration for a Qdrant vector store client. */
 export interface QdrantClientConfig {
   url: string;
   apiKey?: string;
 }
 
+/** Creates a new Qdrant client using explicit config or environment defaults. */
 export function createQdrantClient(config?: Partial<QdrantClientConfig>): QdrantClient {
   const env = loadEnv();
   const opts: { url: string; apiKey?: string } = {
@@ -25,6 +29,34 @@ export function createQdrantClient(config?: Partial<QdrantClientConfig>): Qdrant
   const apiKey = config?.apiKey ?? env.QDRANT_API_KEY;
   if (apiKey) opts.apiKey = apiKey;
   return new QdrantClient(opts);
+}
+
+// ---------------------------------------------------------------------------
+// Shared singleton — avoids creating a new TCP connection per repository
+// ---------------------------------------------------------------------------
+
+let _sharedClient: QdrantClient | null = null;
+let _sharedUrl: string | null = null;
+
+/**
+ * Returns a shared QdrantClient singleton. If the effective URL changes
+ * (e.g. after `resetEnv()`), the old client is discarded.
+ */
+export function getSharedQdrantClient(config?: Partial<QdrantClientConfig>): QdrantClient {
+  const env = loadEnv();
+  const effectiveUrl = config?.url ?? env.QDRANT_URL;
+  if (_sharedClient && _sharedUrl === effectiveUrl) {
+    return _sharedClient;
+  }
+  _sharedClient = createQdrantClient(config);
+  _sharedUrl = effectiveUrl;
+  return _sharedClient;
+}
+
+/** Reset the shared client — for test teardown (same pattern as `resetEnv()`). */
+export function resetSharedQdrantClient(): void {
+  _sharedClient = null;
+  _sharedUrl = null;
 }
 
 /**

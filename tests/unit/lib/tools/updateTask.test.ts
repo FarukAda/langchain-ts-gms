@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import type { Task } from "../../../../src/domain/contracts.js";
 import { createUpdateTaskTool } from "../../../../src/lib/tools/updateTask.js";
 import { makeTask, makeGoal, createToolDeps } from "../../../helpers/mockRepository.js";
@@ -77,5 +77,71 @@ describe("createUpdateTaskTool", () => {
     });
     const result = JSON.parse(raw) as { task: { status: string } };
     expect(result.task.status).toBe("in_progress");
+  });
+
+  // ── Lifecycle hook tests ──────────────────────────────────────────
+
+  it("fires onTaskReady when a task becomes ready (all deps completed)", async () => {
+    const depTask = makeTask({
+      id: "550e8400-e29b-41d4-a716-446655440010",
+      status: "in_progress",
+    });
+    const waitingTask = makeTask({
+      id: "550e8400-e29b-41d4-a716-446655440011",
+      status: "pending",
+      dependencies: [depTask.id],
+    });
+    const goal = baseGoal([depTask, waitingTask]);
+    const onTaskReady = vi.fn();
+    const deps = { ...createToolDeps(GOAL_ID, goal), onTaskReady };
+    const tool = createUpdateTaskTool(deps);
+    await tool.invoke({
+      goalId: GOAL_ID,
+      taskId: depTask.id,
+      status: "completed",
+    });
+    expect(onTaskReady).toHaveBeenCalledTimes(1);
+    expect(onTaskReady).toHaveBeenCalledWith(
+      expect.objectContaining({ id: waitingTask.id }),
+      expect.objectContaining({ id: GOAL_ID }),
+    );
+  });
+
+  it("fires onGoalCompleted when all tasks are completed", async () => {
+    const t1 = makeTask({ id: "550e8400-e29b-41d4-a716-446655440010", status: "completed" });
+    const t2 = makeTask({ id: "550e8400-e29b-41d4-a716-446655440011", status: "in_progress" });
+    const goal = baseGoal([t1, t2]);
+    const onGoalCompleted = vi.fn();
+    const deps = { ...createToolDeps(GOAL_ID, goal), onGoalCompleted };
+    const tool = createUpdateTaskTool(deps);
+    await tool.invoke({
+      goalId: GOAL_ID,
+      taskId: t2.id,
+      status: "completed",
+    });
+    expect(onGoalCompleted).toHaveBeenCalledTimes(1);
+    expect(onGoalCompleted).toHaveBeenCalledWith(
+      expect.objectContaining({ id: GOAL_ID }),
+    );
+  });
+
+  it("does not crash when a hook throws", async () => {
+    const t1 = makeTask({
+      id: "550e8400-e29b-41d4-a716-446655440010",
+      status: "in_progress",
+    });
+    const goal = baseGoal([t1]);
+    const onGoalCompleted = vi.fn().mockRejectedValue(new Error("hook boom"));
+    const deps = { ...createToolDeps(GOAL_ID, goal), onGoalCompleted };
+    const tool = createUpdateTaskTool(deps);
+    // Should not throw despite onGoalCompleted throwing
+    const raw = await tool.invoke({
+      goalId: GOAL_ID,
+      taskId: t1.id,
+      status: "completed",
+    });
+    const result = JSON.parse(raw) as { task: { status: string } };
+    expect(result.task.status).toBe("completed");
+    expect(onGoalCompleted).toHaveBeenCalledTimes(1);
   });
 });

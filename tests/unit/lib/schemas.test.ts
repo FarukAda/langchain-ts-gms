@@ -216,16 +216,6 @@ describe("lifecycleSchemas", () => {
       expect(coerceLifecycleInput({ status: "undefined" }).status).toBeUndefined();
     });
 
-    it("coerces float fields", () => {
-      const result = coerceLifecycleInput({ minScoreForLeaf: "0.75" });
-      expect(result.minScoreForLeaf).toBe(0.75);
-    });
-
-    it("handles non-finite float as undefined", () => {
-      const result = coerceLifecycleInput({ minScoreForLeaf: "not-a-number" });
-      expect(result.minScoreForLeaf).toBeUndefined();
-    });
-
     it("handles non-finite int as undefined", () => {
       const result = coerceLifecycleInput({ limit: "abc" });
       expect(result.limit).toBeUndefined();

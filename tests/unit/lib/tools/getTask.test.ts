@@ -17,6 +17,7 @@ describe("createGetTaskTool", () => {
       priority: "medium",
       tasks: [task],
       metadata: {},
+      _version: 1,
     };
     const tool = createGetTaskTool(createToolDeps(GOAL_ID, goal));
     const raw = await tool.invoke({ goalId: GOAL_ID, taskId: TASK_ID });
@@ -33,6 +34,7 @@ describe("createGetTaskTool", () => {
       priority: "medium",
       tasks: [makeTask({ id: TASK_ID })],
       metadata: {},
+      _version: 1,
     };
     const tool = createGetTaskTool(createToolDeps(GOAL_ID, goal));
     const missingId = "550e8400-e29b-41d4-a716-44665544ffff";
@@ -51,6 +53,7 @@ describe("createGetTaskTool", () => {
       priority: "medium",
       tasks: [parent],
       metadata: {},
+      _version: 1,
     };
     const tool = createGetTaskTool(createToolDeps(GOAL_ID, goal));
     const raw = await tool.invoke({ goalId: GOAL_ID, taskId: CHILD_ID });
@@ -69,6 +72,7 @@ describe("createGetTaskTool", () => {
       priority: "medium",
       tasks: [task],
       metadata: {},
+      _version: 1,
     };
     const tool = createGetTaskTool(createToolDeps(GOAL_ID, goal));
     const raw = await tool.invoke({ goalId: GOAL_ID, taskId: TASK_ID });

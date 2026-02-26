@@ -44,6 +44,8 @@ export interface Task {
   result?: string | undefined;
   error?: string | undefined;
   capabilityId?: string | undefined;
+  /** ISO datetime when this task was marked as completed. */
+  completedAt?: string | undefined;
   // --- Rich metadata ---
   type?: TaskType | undefined;
   acceptanceCriteria?: string | undefined;
@@ -51,6 +53,13 @@ export interface Task {
   riskLevel?: RiskLevel | undefined;
   estimatedComplexity?: Complexity | undefined;
   rationale?: string | undefined;
+  /** Consumer-defined custom fields from customTaskSchema. */
+  customFields?: Record<string, unknown> | undefined;
+  // --- Data-flow routing ---
+  /** Named inputs this task expects from upstream tasks. */
+  expectedInputs?: string[] | undefined;
+  /** Named outputs this task produces for downstream tasks. */
+  providedOutputs?: string[] | undefined;
 }
 
 export const TaskSchema = z.object({
@@ -66,6 +75,9 @@ export const TaskSchema = z.object({
   result: z.string().optional(),
   error: z.string().optional(),
   capabilityId: z.string().optional(),
+  completedAt: z.iso.datetime({ offset: true }).optional().meta({
+    description: "ISO datetime when this task was marked as completed",
+  }),
   // --- Rich metadata ---
   type: TaskTypeSchema.optional().meta({
     description: "Task type: research, action, validation, or decision",
@@ -78,6 +90,16 @@ export const TaskSchema = z.object({
   riskLevel: RiskLevelSchema.optional().meta({ description: "Risk level for HITL gating" }),
   estimatedComplexity: ComplexitySchema.optional().meta({ description: "Estimated effort" }),
   rationale: z.string().optional().meta({ description: "Why this task exists in the plan" }),
+  customFields: z.record(z.string(), z.unknown()).optional().meta({
+    description: "Consumer-defined custom fields from customTaskSchema",
+  }),
+  // --- Data-flow routing ---
+  expectedInputs: z.array(z.string()).optional().meta({
+    description: "Named inputs this task expects from upstream tasks' providedOutputs",
+  }),
+  providedOutputs: z.array(z.string()).optional().meta({
+    description: "Named outputs this task produces for downstream tasks' expectedInputs",
+  }),
 });
 
 /** Top-level goal with optional parent (for sub-goals). Uses hierarchical tasks. */
@@ -92,6 +114,8 @@ export const GoalSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).default({}),
   createdAt: z.iso.datetime({ offset: true }).optional(),
   updatedAt: z.iso.datetime({ offset: true }).optional(),
+  /** Optimistic-lock version counter. Incremented on every successful write. */
+  _version: z.number().int().min(1).default(1),
 });
 export type Goal = z.infer<typeof GoalSchema>;
 

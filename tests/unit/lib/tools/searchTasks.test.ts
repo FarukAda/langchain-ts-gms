@@ -186,4 +186,42 @@ describe("createSearchTasksTool", () => {
     expect(result.total).toBe(0);
     expect(result.items).toEqual([]);
   });
+
+  // ── Embedding cache test ──────────────────────────────────────────
+
+  it("reuses cached task embeddings on successive searches", async () => {
+    const { _resetEmbedCache } = await import("../../../../src/lib/tools/searchTasks.js");
+    _resetEmbedCache();
+
+    const tasks = [
+      makeTask({ id: "550e8400-e29b-41d4-a716-446655440001", description: "Build the API" }),
+      makeTask({ id: "550e8400-e29b-41d4-a716-446655440002", description: "Write docs" }),
+    ];
+    const goal = goalWith(tasks);
+
+    const queryVec = [1.0, 0.0, 0.0];
+    const taskVecs = [
+      [0.9, 0.1, 0.0],
+      [0.8, 0.2, 0.0],
+    ];
+
+    const embedDocumentsSpy = vi.fn().mockResolvedValue(taskVecs);
+    const mockEmbed: EmbeddingsInterface = {
+      embedQuery: vi.fn().mockResolvedValue(queryVec),
+      embedDocuments: embedDocumentsSpy,
+    };
+
+    const deps = { ...createToolDeps(GOAL_ID, goal), embeddings: mockEmbed };
+    const tool = createSearchTasksTool(deps);
+
+    // First search — should call embedDocuments
+    await tool.invoke({ goalId: GOAL_ID, query: "API" });
+    expect(embedDocumentsSpy).toHaveBeenCalledTimes(1);
+
+    // Second search — same tasks, should reuse cache
+    await tool.invoke({ goalId: GOAL_ID, query: "docs" });
+    expect(embedDocumentsSpy).toHaveBeenCalledTimes(1); // Still 1 — cache hit
+
+    _resetEmbedCache();
+  });
 });

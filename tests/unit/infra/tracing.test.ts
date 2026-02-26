@@ -167,10 +167,13 @@ describe("tracing", () => {
       expect(ErrorCodes.INVARIANT_VIOLATION).toBe("GMS_INVARIANT_VIOLATION");
       expect(ErrorCodes.INFRA_RETRIABLE).toBe("GMS_INFRA_RETRIABLE");
       expect(ErrorCodes.MISSING_DEPENDENCY).toBe("GMS_MISSING_DEPENDENCY");
+      expect(ErrorCodes.CONCURRENT_MODIFICATION).toBe("GMS_CONCURRENT_MODIFICATION");
+      expect(ErrorCodes.GUARDRAIL_BLOCKED).toBe("GMS_GUARDRAIL_BLOCKED");
+      expect(ErrorCodes.RATE_LIMIT_EXCEEDED).toBe("GMS_RATE_LIMIT_EXCEEDED");
     });
 
-    it("has 7 error codes", () => {
-      expect(Object.keys(ErrorCodes)).toHaveLength(7);
+    it("has 10 error codes", () => {
+      expect(Object.keys(ErrorCodes)).toHaveLength(10);
     });
   });
 

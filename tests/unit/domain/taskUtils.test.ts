@@ -251,6 +251,7 @@ describe("taskUtils", () => {
           },
         ],
         metadata: {},
+        _version: 1,
       };
       const result = validateGoalInvariants(goal);
       expect(result.valid).toBe(true);
@@ -283,6 +284,7 @@ describe("taskUtils", () => {
           },
         ],
         metadata: {},
+        _version: 1,
       };
       const result = validateGoalInvariants(goal);
       expect(result.valid).toBe(false);
@@ -301,6 +303,7 @@ describe("taskUtils", () => {
         priority: "medium",
         tasks: [parent],
         metadata: {},
+        _version: 1,
       };
       const result = validateGoalInvariants(goal);
       expect(result.valid).toBe(false);

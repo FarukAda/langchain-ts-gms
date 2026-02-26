@@ -61,6 +61,10 @@
       "types": "./dist/lib/schemas/lifecycleSchemas.d.ts",
       "default": "./dist/lib/schemas/lifecycleSchemas.js"
     },
+    "./mcp": {
+      "types": "./dist/mcp/index.d.ts",
+      "default": "./dist/mcp/index.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -79,7 +83,7 @@
     "test:ci": "cross-env CI=true vitest run tests/unit",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage tests/unit",
-    "test:agent": "cross-env GMS_AGENT_TEST=1 OLLAMA_HOST=http://127.0.0.1:11434 QDRANT_URL=http://localhost:6333 vitest run tests/agent --reporter=verbose",
+    "test:agent": "cross-env GMS_AGENT_TEST=1 OLLAMA_HOST=http://127.0.0.1:11434 QDRANT_URL=http://localhost:6333 vitest run tests/agent --reporter=verbose --reporter=allure-vitest/reporter",
     "allure:generate": "npx rimraf allure-report && npx allure generate -o allure-report",
     "allure:open": "npx allure open allure-report",
     "test:allure": "npx rimraf allure-results && npm run test && npm run test:agent && npm run allure:generate && npm run allure:open",
@@ -95,6 +99,7 @@
     "@langchain/langgraph": "^1.1.5",
     "@langchain/ollama": "^1.2.4",
     "@langchain/qdrant": "^1.0.1",
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "@qdrant/qdrant-js": "^1.17.0",
     "langchain": "^1.2.26",
     "zod": "^4.3.6"

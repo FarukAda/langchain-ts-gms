@@ -1,7 +1,7 @@
 import type { Goal, Task, TaskStatus, Priority, TaskType } from "../domain/contracts.js";
 import { RESPONSE_CONTRACT_VERSION } from "../domain/contracts.js";
 import { flattenTasks } from "../domain/taskUtils.js";
-import type { GoalMemoryRepository } from "../infra/vector/goalMemoryRepository.js";
+import type { IGoalRepository } from "../domain/ports.js";
 import { ErrorCodes } from "../infra/observability/tracing.js";
 import type { GmsToolInput } from "./types.js";
 
@@ -68,6 +68,7 @@ export function buildGoal(input: GmsToolInput): Goal {
     metadata: {},
     createdAt: now,
     updatedAt: now,
+    _version: 1,
   };
   if (input.tenantId != null) goal.tenantId = input.tenantId;
   if (input.metadata != null) goal.metadata = input.metadata;
@@ -147,13 +148,14 @@ export function filterTaskTree(tasks: Task[], predicate: (t: Task) => boolean): 
 }
 
 /** Fetch a goal by ID or throw a domain error. */
-export async function getGoalOrThrow(repo: GoalMemoryRepository, goalId: string): Promise<Goal> {
+export async function getGoalOrThrow(repo: IGoalRepository, goalId: string): Promise<Goal> {
   const goal = await repo.getById(goalId);
   if (!goal) throw new Error(`[${ErrorCodes.GOAL_NOT_FOUND}] Goal not found: ${goalId}`);
   return goal;
 }
 
 /** Wrap a tool response with the contract version stamp. */
-export function wrapToolResponse(data: Record<string, unknown>): string {
+export function wrapToolResponse(data: object): string {
   return JSON.stringify({ version: RESPONSE_CONTRACT_VERSION, ...data });
 }
+

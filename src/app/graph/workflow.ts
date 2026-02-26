@@ -13,16 +13,16 @@ import type { BaseChatModel } from "@langchain/core/language_models/chat_models"
 import { GmsStateAnnotation } from "../state/schema.js";
 import { decomposeGoal } from "../planning/decomposeGoal.js";
 import { evaluateGuardrails } from "../governance/guardrails.js";
-import { logInfo, logWarn, logError, withNodeTiming } from "../../infra/observability/tracing.js";
-import type { GoalMemoryRepository } from "../../infra/vector/goalMemoryRepository.js";
+import { logInfo, logWarn, withNodeTiming } from "../../infra/observability/tracing.js";
+import type { IGoalRepository } from "../../domain/ports.js";
 import { createEmbeddingProvider } from "../../infra/embeddings/embeddingProvider.js";
 import { createChatModelProvider } from "../../infra/chat/chatModelProvider.js";
 import { flattenTasks } from "../../domain/taskUtils.js";
 import type { DecomposeOptions } from "../planning/decomposeGoal.js";
 
 export interface WorkflowDeps {
-  goalRepository: GoalMemoryRepository;
-  capabilityRepository?: GoalMemoryRepository;
+  goalRepository: IGoalRepository;
+  capabilityRepository?: IGoalRepository;
   /** Inject for testing; otherwise uses createEmbeddingProvider() */
   embeddings?: EmbeddingsInterface;
   /** Inject for testing; otherwise uses createChatModelProvider() */
@@ -38,6 +38,17 @@ export interface WorkflowDeps {
 }
 
 /**
+ * Node names used in the GMS workflow graph.
+ * Shared with stream event mapping in `planGoal.ts` to prevent silent breakage.
+ */
+export const GMS_NODE_NAMES = {
+  PLANNER: "planner",
+  GUARDRAIL: "guardrail",
+  HUMAN_APPROVAL: "human_approval",
+  SUMMARIZER: "summarizer",
+} as const;
+
+/**
  * Builds the GMS LangGraph workflow: planner -> guardrail -> summarizer.
  * GMS produces plans (decomposed tasks) for autonomous agents to execute.
  * Guardrail enforces policy; HITL interrupt for high-risk plans.
@@ -49,36 +60,32 @@ export function createGmsWorkflow(deps: WorkflowDeps) {
   const checkpointer =
     deps.checkpointer ??
     (() => {
-      const msg =
+      logWarn(
         "Using in-memory MemorySaver checkpointer — state will be lost on process restart. " +
-        "For production, use @langchain/langgraph-checkpoint-sqlite or " +
-        "@langchain/langgraph-checkpoint-postgres.";
-      if (process.env.NODE_ENV === "production") {
-        logError(msg);
-      } else {
-        logWarn(msg);
-      }
+          "For production, pass a durable checkpointer via WorkflowDeps.checkpointer " +
+          "(e.g. @langchain/langgraph-checkpoint-sqlite or @langchain/langgraph-checkpoint-postgres).",
+      );
       return new MemorySaver();
     })();
 
   const graph = new StateGraph(GmsStateAnnotation)
-    .addNode("planner", plannerNode(deps, embeddings, chatModel), {
+    .addNode(GMS_NODE_NAMES.PLANNER, plannerNode(deps, embeddings, chatModel), {
       retryPolicy: { maxAttempts: 3 },
     })
-    .addNode("guardrail", guardrailNode(deps))
-    .addNode("human_approval", humanApprovalNode())
-    .addNode("summarizer", summarizerNode(deps))
-    .addEdge(START, "planner")
-    .addConditionalEdges("planner", routeAfterPlanner, {
-      guardrail: "guardrail",
-      summarizer: "summarizer",
+    .addNode(GMS_NODE_NAMES.GUARDRAIL, guardrailNode(deps))
+    .addNode(GMS_NODE_NAMES.HUMAN_APPROVAL, humanApprovalNode())
+    .addNode(GMS_NODE_NAMES.SUMMARIZER, summarizerNode(deps))
+    .addEdge(START, GMS_NODE_NAMES.PLANNER)
+    .addConditionalEdges(GMS_NODE_NAMES.PLANNER, routeAfterPlanner, {
+      guardrail: GMS_NODE_NAMES.GUARDRAIL,
+      summarizer: GMS_NODE_NAMES.SUMMARIZER,
     })
-    .addConditionalEdges("guardrail", routeAfterGuardrail, {
-      human_approval: "human_approval",
-      summarizer: "summarizer",
+    .addConditionalEdges(GMS_NODE_NAMES.GUARDRAIL, routeAfterGuardrail, {
+      human_approval: GMS_NODE_NAMES.HUMAN_APPROVAL,
+      summarizer: GMS_NODE_NAMES.SUMMARIZER,
     })
-    .addEdge("human_approval", "summarizer")
-    .addEdge("summarizer", END);
+    .addEdge(GMS_NODE_NAMES.HUMAN_APPROVAL, GMS_NODE_NAMES.SUMMARIZER)
+    .addEdge(GMS_NODE_NAMES.SUMMARIZER, END);
 
   return graph.compile({ checkpointer });
 }
@@ -175,6 +182,7 @@ function summarizerNode(deps: WorkflowDeps) {
       return {
         currentPhase: "summarizing",
         goal: { ...goal, status, updatedAt: now },
+        tasks: tasksToSave,
       };
     });
   };

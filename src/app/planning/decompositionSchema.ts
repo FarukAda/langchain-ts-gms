@@ -16,7 +16,7 @@ import {
  * - `.meta()` must appear last for `z.toJSONSchema()` to pick up descriptions
  * - Zod defaults act as structural fallback if the LLM omits the field
  */
-const DecomposedTaskSchema = z.object({
+export const DecomposedTaskSchema = z.object({
   description: z
     .string()
     .meta({ description: "Clear, actionable task description (one sentence)" }),
@@ -40,6 +40,14 @@ const DecomposedTaskSchema = z.object({
   }),
   rationale: z.string().optional().meta({
     description: "Why this task exists in the plan — what knowledge gap or action it addresses",
+  }),
+  expectedInputs: z.array(z.string()).default([]).meta({
+    description:
+      "Named inputs this task expects from upstream tasks (e.g. 'research_report', 'config_file')",
+  }),
+  providedOutputs: z.array(z.string()).default([]).meta({
+    description:
+      "Named outputs this task produces for downstream tasks (e.g. 'migration_script', 'test_results')",
   }),
   get subTasks(): z.ZodDefault<z.ZodArray<typeof DecomposedTaskSchema>> {
     return z.array(DecomposedTaskSchema).default([]).meta({

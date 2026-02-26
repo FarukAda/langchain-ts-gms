@@ -28,6 +28,7 @@ describe("GMS workflow", () => {
       priority: "high",
       tasks: [],
       metadata: {},
+      _version: 1,
     };
 
     const final = await workflow.invoke(
@@ -74,6 +75,7 @@ describe("GMS workflow", () => {
           priority: "medium",
           tasks: [],
           metadata: {},
+      _version: 1,
         },
         tasks: [],
         currentPhase: "planning",
@@ -108,6 +110,7 @@ describe("GMS workflow", () => {
           priority: "medium",
           tasks: [],
           metadata: {},
+      _version: 1,
         },
         tasks: [],
         currentPhase: "planning",
@@ -121,8 +124,8 @@ describe("GMS workflow", () => {
   });
 
   it("triggers human approval when task count exceeds threshold", async () => {
-    // DEFAULT_MAX_TASK_COUNT = 10, so we need 11+ tasks total
-    const largeTasks = Array.from({ length: 11 }, (_, i) => ({
+    // DEFAULT_MAX_TASK_COUNT = 50, so we need 51+ tasks total
+    const largeTasks = Array.from({ length: 51 }, (_, i) => ({
       description: `Task ${i + 1}`,
       priority: "medium" as const,
       subTasks: [],
@@ -147,6 +150,7 @@ describe("GMS workflow", () => {
             priority: "high",
             tasks: [],
             metadata: {},
+      _version: 1,
           },
           tasks: [],
           currentPhase: "planning",

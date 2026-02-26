@@ -1,4 +1,5 @@
 import { tool } from "@langchain/core/tools";
+import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import {
   SearchTasksInputSchema,
   coerceLifecycleInput,
@@ -33,6 +34,128 @@ function cosineSimilarity(a: number[], b: number[]): number {
 /** Minimum cosine similarity score for a task to be considered a match. */
 const MIN_SIMILARITY = 0.3;
 
+// ---------------------------------------------------------------------------
+// Embedding cache — avoids re-embedding the same task set on rapid successive
+// searches within the same goal.  30 s TTL, keyed on (goalId, descriptions).
+// ---------------------------------------------------------------------------
+
+/** Cache TTL in milliseconds. */
+const EMBED_CACHE_TTL_MS = 30_000;
+
+interface EmbedCacheEntry {
+  embeddings: number[][];
+  expiry: number;
+}
+
+/** Maximum number of cache entries before FIFO eviction. */
+const MAX_EMBED_CACHE_ENTRIES = 100;
+
+/** Module-level embedding cache.  Keyed on goalId + sorted-descriptions hash. */
+const embedCache = new Map<string, EmbedCacheEntry>();
+
+/**
+ * Produces a compact, deterministic cache key for task description embeddings.
+ * Uses an FNV-1a-inspired hash instead of raw string concatenation to keep
+ * memory usage constant regardless of description length.
+ */
+function embedCacheKey(goalId: string, descriptions: string[]): string {
+  let hash = 2166136261;
+  for (const d of descriptions) {
+    for (let i = 0; i < d.length; i++) {
+      hash ^= d.charCodeAt(i);
+      hash = (hash * 16777619) >>> 0;
+    }
+    // Separator to avoid "ab","c" colliding with "a","bc"
+    hash ^= 10;
+    hash = (hash * 16777619) >>> 0;
+  }
+  return `${goalId}::${descriptions.length}::${hash.toString(36)}`;
+}
+
+/**
+ * Get or compute task embeddings, using a short TTL cache.
+ * Expired entries are lazily evicted on access.
+ * Cache is bounded to {@link MAX_EMBED_CACHE_ENTRIES} entries via FIFO eviction.
+ */
+async function getOrEmbedTasks(
+  embeddings: EmbeddingsInterface,
+  goalId: string,
+  descriptions: string[],
+): Promise<number[][]> {
+  const key = embedCacheKey(goalId, descriptions);
+  const now = Date.now();
+
+  const cached = embedCache.get(key);
+  if (cached && cached.expiry > now) {
+    return cached.embeddings;
+  }
+
+  // Evict expired entry
+  if (cached) embedCache.delete(key);
+
+  // FIFO eviction: remove oldest entries when at capacity
+  while (embedCache.size >= MAX_EMBED_CACHE_ENTRIES) {
+    const oldest = embedCache.keys().next().value;
+    if (oldest !== undefined) embedCache.delete(oldest);
+    else break;
+  }
+
+  const result = await embeddings.embedDocuments(descriptions);
+  embedCache.set(key, { embeddings: result, expiry: now + EMBED_CACHE_TTL_MS });
+  return result;
+}
+
+/** @internal Exported for testing — clear the embedding cache. */
+export function _resetEmbedCache(): void {
+  embedCache.clear();
+}
+
+/**
+ * Rank tasks by semantic similarity to a query string using embeddings.
+ *
+ * Embeds the query and each task's description (with caching), scores via
+ * cosine similarity, filters below {@link MIN_SIMILARITY}, and returns tasks
+ * sorted by descending relevance.
+ *
+ * Shared by both the LangChain tool and the MCP server.
+ */
+export async function semanticSearchTasks(
+  tasks: Task[],
+  query: string,
+  embeddings: EmbeddingsInterface,
+  goalId: string,
+): Promise<Task[]> {
+  const queryEmbedding = await embeddings.embedQuery(query);
+  const descriptions = tasks.map(
+    (t) => `${t.description} ${t.result ?? ""} ${t.error ?? ""}`,
+  );
+  const taskEmbeddings = await getOrEmbedTasks(embeddings, goalId, descriptions);
+
+  const scored = tasks
+    .map((t, i) => ({
+      task: t,
+      score: cosineSimilarity(queryEmbedding, taskEmbeddings[i]!),
+    }))
+    .filter((s) => s.score >= MIN_SIMILARITY)
+    .sort((a, b) => b.score - a.score);
+
+  return scored.map((s) => s.task);
+}
+
+/**
+ * Rank tasks by case-insensitive substring match against a query string.
+ *
+ * Falls back path when embeddings are not available.
+ * Shared by both the LangChain tool and the MCP server.
+ */
+export function substringSearchTasks(tasks: Task[], query: string): Task[] {
+  const qLower = query.toLowerCase();
+  return tasks.filter((t) => {
+    const hay = `${t.description} ${t.result ?? ""} ${t.error ?? ""}`.toLowerCase();
+    return hay.includes(qLower);
+  });
+}
+
 /**
  * Semantic task search within a goal's task tree.
  *
@@ -46,6 +169,7 @@ const MIN_SIMILARITY = 0.3;
 export const createSearchTasksTool = (deps: GmsToolDeps) =>
   tool(
     async (rawInput) => {
+      if (deps.rateLimiter) await deps.rateLimiter.acquire();
       const input = stripNulls(coerceLifecycleInput(rawInput));
       const goal = await getGoalOrThrow(deps.goalRepository, input.goalId);
       const lim = Number(input.limit) || DEFAULT_PAGE_LIMIT;
@@ -68,30 +192,11 @@ export const createSearchTasksTool = (deps: GmsToolDeps) =>
         // No query — return all structurally filtered tasks
         matched = structFiltered;
       } else if (deps.embeddings) {
-        // Semantic search — embed query and task descriptions, rank by cosine similarity
-        const queryEmbedding = await deps.embeddings.embedQuery(q);
-        const descriptions = structFiltered.map(
-          (t) => `${t.description} ${t.result ?? ""} ${t.error ?? ""}`,
-        );
-        const taskEmbeddings = await deps.embeddings.embedDocuments(descriptions);
-
-        const scored = structFiltered
-          .map((t, i) => ({
-            task: t,
-            score: cosineSimilarity(queryEmbedding, taskEmbeddings[i]!),
-          }))
-          .filter((s) => s.score >= MIN_SIMILARITY)
-          .sort((a, b) => b.score - a.score);
-
-        matched = scored.map((s) => s.task);
+        matched = await semanticSearchTasks(structFiltered, q, deps.embeddings, goal.id);
       } else {
         // Fallback — substring matching (backward compat)
         logWarn("Embeddings not available for semantic search; falling back to substring matching");
-        const qLower = q.toLowerCase();
-        matched = structFiltered.filter((t) => {
-          const hay = `${t.description} ${t.result ?? ""} ${t.error ?? ""}`.toLowerCase();
-          return hay.includes(qLower);
-        });
+        matched = substringSearchTasks(structFiltered, q);
       }
 
       const page = paginate(matched, lim, off);

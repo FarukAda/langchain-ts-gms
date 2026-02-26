@@ -1,54 +1,46 @@
 import { Document } from "@langchain/core/documents";
+import { ConcurrentModificationError } from "../../domain/errors.js";
 import { QdrantVectorStore } from "@langchain/qdrant";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
-import type { Goal, TaskStatus, Priority } from "../../domain/contracts.js";
+import type { Goal } from "../../domain/contracts.js";
 import { GoalSchema } from "../../domain/contracts.js";
 import { migrateTasksToHierarchy } from "../../domain/taskUtils.js";
+import type {
+  IGoalRepository,
+  GoalSearchFilter,
+  GoalListOptions,
+  GoalListResult,
+} from "../../domain/ports.js";
 import {
-  createQdrantClient,
+  getSharedQdrantClient,
   bootstrapQdrantCollections,
   GOALS_COLLECTION,
 } from "./qdrantClient.js";
+import type { QdrantClient } from "@qdrant/qdrant-js";
 import { logWarn } from "../observability/tracing.js";
 
-export interface GoalSearchFilter {
-  status?: TaskStatus;
-  priority?: Priority;
-  tenantId?: string;
-  goalId?: string;
-}
+// Re-export port types for backward compatibility
+export type { GoalSearchFilter, GoalListOptions, GoalListResult } from "../../domain/ports.js";
 
-/** Paging and filter options for listing goals from vector storage. */
-export interface GoalListOptions {
-  limit?: number;
-  offset?: number;
-  filter?: GoalSearchFilter;
-}
-
-/** Deterministic page payload with total count metadata. */
-export interface GoalListResult {
-  items: Goal[];
-  total: number;
-  limit: number;
-  offset: number;
-}
-
-/** Configuration for constructing repository instances. */
-export interface GoalMemoryRepositoryConfig {
+/** Configuration for constructing Qdrant repository instances. */
+export interface QdrantGoalRepositoryConfig {
   embeddings: EmbeddingsInterface;
   collectionName?: string;
+  /** Optional pre-constructed client (defaults to shared singleton). */
+  client?: QdrantClient;
 }
 
+
 /**
- * Repository abstraction over Qdrant vector storage for goal documents.
+ * Qdrant-backed implementation of {@link IGoalRepository}.
  * Supports semantic search, filtered retrieval, and deterministic pagination.
  */
-export class GoalMemoryRepository {
+export class QdrantGoalRepository implements IGoalRepository {
   private readonly store: QdrantVectorStore;
   private readonly collectionName: string;
 
-  constructor(config: GoalMemoryRepositoryConfig) {
-    const client = createQdrantClient();
+  constructor(config: QdrantGoalRepositoryConfig) {
+    const client = config.client ?? getSharedQdrantClient();
     this.collectionName = config.collectionName ?? GOALS_COLLECTION;
     this.store = new QdrantVectorStore(config.embeddings, {
       client,
@@ -68,8 +60,28 @@ export class GoalMemoryRepository {
 
   /**
    * Upsert a goal into the vector store. Content = description; metadata = filterable payload.
+   *
+   * When `expectedVersion` is provided, performs a compare-and-set:
+   * reads the stored `_version`, verifies it matches, and writes with
+   * `_version + 1`. On mismatch throws {@link ConcurrentModificationError}.
+   *
+   * > **Caveat (TOCTOU):** The compare-and-set is not truly atomic — there
+   * > is a window between `getById()` and `addDocuments()` during which
+   * > another writer can change the version. Qdrant does not support
+   * > conditional writes, so this is an inherent limitation.
    */
-  async upsert(goal: Goal): Promise<void> {
+  async upsert(goal: Goal, expectedVersion?: number): Promise<void> {
+    if (expectedVersion !== undefined) {
+      const existing = await this.getById(goal.id);
+      const storedVersion = existing?._version ?? 1;
+      if (storedVersion !== expectedVersion) {
+        throw new ConcurrentModificationError(goal.id, expectedVersion);
+      }
+      const versionedGoal = { ...goal, _version: expectedVersion + 1 };
+      const doc = goalToDocument(versionedGoal);
+      await this.store.addDocuments([doc], { ids: [goal.id] });
+      return;
+    }
     const doc = goalToDocument(goal);
     await this.store.addDocuments([doc], { ids: [goal.id] });
   }
@@ -146,9 +158,14 @@ export class GoalMemoryRepository {
 
   /**
    * List goals with deterministic ordering and total count.
+   *
+   * > **Note:** The sort by `updatedAt` is applied to the current page only
+   * > (in-memory), not globally across Qdrant. This means across pages,
+   * > ordering is not globally deterministic. For consistent ordering, use
+   * > cursor-based pagination via `nextCursor` in the response.
    */
   async listWithTotal(options: GoalListOptions = {}): Promise<GoalListResult> {
-    const { limit = 50, offset = 0, filter } = options;
+    const { limit = 50, offset = 0, filter, cursor } = options;
     const safeLimit = Math.max(1, Math.min(200, limit));
     const safeOffset = Math.max(0, offset);
     const qdrantFilter = filterToQdrantFilter(filter);
@@ -160,39 +177,53 @@ export class GoalMemoryRepository {
     });
     const total = countResult.count;
 
-    // Skip `offset` points via scroll cursor without loading payload.
+    // Determine the scroll cursor for the data fetch.
     //
-    // ⚠️ O(n) trade-off: Qdrant's scroll API has no native offset parameter,
-    // so we must page through discarded batches.  For typical GMS workloads
-    // (≤ hundreds of goals) this is negligible.  For very large offsets,
-    // consider cursor-based pagination using `next_page_offset` directly.
-    let cursor: string | number | null | undefined;
-    let skipped = 0;
-    while (skipped < safeOffset) {
-      const batch = Math.min(200, safeOffset - skipped);
-      const page = await this.store.client.scroll(this.collectionName, {
-        ...(qdrantFilter ? { filter: qdrantFilter } : {}),
-        limit: batch,
-        ...(cursor !== undefined ? { offset: cursor } : {}),
-        with_payload: false,
-        with_vector: false,
-      });
-      const points = page.points ?? [];
-      if (points.length === 0) break;
-      skipped += points.length;
-      const next = (page as { next_page_offset?: string | number | null }).next_page_offset;
-      if (next === undefined || next === null) break;
-      cursor = next;
+    // When a cursor is provided (from a previous page's `nextCursor`), we skip
+    // the O(n) offset scroll entirely and use the cursor directly — this is the
+    // O(1) fast path.
+    //
+    // When no cursor is provided, we fall back to the legacy offset scroll
+    // (O(n) — pages through discarded batches) for backward compatibility.
+    let scrollOffset: string | number | null | undefined;
+    if (cursor !== undefined) {
+      // ── O(1) cursor path ──────────────────────────────────────────────
+      scrollOffset = cursor;
+    } else if (safeOffset > 0) {
+      // ── O(n) legacy offset path ───────────────────────────────────────
+      // Qdrant's scroll API has no native numeric offset parameter, so we
+      // page through discarded batches.  For typical GMS workloads (≤ hundreds
+      // of goals) this is negligible.
+      let skipped = 0;
+      while (skipped < safeOffset) {
+        const batch = Math.min(200, safeOffset - skipped);
+        const page = await this.store.client.scroll(this.collectionName, {
+          ...(qdrantFilter ? { filter: qdrantFilter } : {}),
+          limit: batch,
+          ...(scrollOffset !== undefined ? { offset: scrollOffset } : {}),
+          with_payload: false,
+          with_vector: false,
+        });
+        const points = page.points ?? [];
+        if (points.length === 0) break;
+        skipped += points.length;
+        const next = (page as { next_page_offset?: string | number | null }).next_page_offset;
+        if (next === undefined || next === null) break;
+        scrollOffset = next;
+      }
     }
 
     // Fetch the actual page with payload
     const dataPage = await this.store.client.scroll(this.collectionName, {
       ...(qdrantFilter ? { filter: qdrantFilter } : {}),
       limit: safeLimit,
-      ...(cursor !== undefined ? { offset: cursor } : {}),
+      ...(scrollOffset !== undefined ? { offset: scrollOffset } : {}),
       with_payload: true,
       with_vector: false,
     });
+
+    const nextPageOffset = (dataPage as { next_page_offset?: string | number | null })
+      .next_page_offset;
 
     const goals = (dataPage.points ?? [])
       .map((p) => {
@@ -214,6 +245,7 @@ export class GoalMemoryRepository {
       total,
       limit: safeLimit,
       offset: safeOffset,
+      ...(nextPageOffset != null ? { nextCursor: nextPageOffset } : {}),
     };
   }
 
@@ -245,6 +277,7 @@ function goalToMetadata(goal: Goal): Record<string, unknown> {
     custom_metadata: goal.metadata ?? {},
     created_at: goal.createdAt ?? new Date().toISOString(),
     updated_at: goal.updatedAt ?? new Date().toISOString(),
+    _version: goal._version ?? 1,
   };
 }
 
@@ -265,6 +298,7 @@ function documentToGoal(doc: Document): Goal | null {
     metadata: (m.custom_metadata as Record<string, unknown>) ?? {},
     createdAt: m.created_at as string | undefined,
     updatedAt: m.updated_at as string | undefined,
+    _version: typeof m._version === "number" ? m._version : 1,
   };
   const result = GoalSchema.safeParse(candidate);
   if (!result.success) {
@@ -285,3 +319,4 @@ function filterToQdrantFilter(filter?: GoalSearchFilter): object | undefined {
   if (must.length === 0) return undefined;
   return { must };
 }
+

@@ -16,6 +16,7 @@ import type { GmsToolDeps } from "../types.js";
 import type { Task } from "../../domain/contracts.js";
 import { flattenTasks } from "../../domain/taskUtils.js";
 
+/** Creates the `gms_list_tasks` tool for listing tasks with status/priority/type filters and pagination. */
 export const createListTasksTool = (deps: GmsToolDeps) =>
   tool(
     async (rawInput) => {

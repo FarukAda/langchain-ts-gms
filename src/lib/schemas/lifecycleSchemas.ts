@@ -26,7 +26,6 @@ const laxBool = z.union([z.boolean(), z.string()]);
 const laxInt = z.union([z.number().int(), z.string()]);
 
 /** Float that also accepts string representations (for JSON Schema compat). */
-const laxFloat = z.union([z.number(), z.string()]);
 
 /**
  * Array that also accepts a single string value (for LLM compat).
@@ -201,12 +200,18 @@ export const ReplanGoalInputSchema = z.object({
       description:
         "How to merge new tasks with existing ones. 'append' (default): keep all existing, add new. 'replace_failed': remove failed tasks, add new. 'replace_all': discard all existing, generate fresh plan.",
     }),
+  linkToLastCompleted: laxBool
+    .nullable()
+    .optional()
+    .default(false)
+    .meta({
+      description:
+        "When true and strategy is 'append', the first new task depends on the last completed task in the existing tree, creating a continuation chain. Ignored for other strategies.",
+    }),
   decomposeOptions: z
     .object({
       topK: laxInt.nullable().optional(),
       maxDepth: laxInt.nullable().optional(),
-      minScoreForLeaf: laxFloat.nullable().optional(),
-      maxDescriptionLength: laxInt.nullable().optional(),
     })
     .nullable()
     .optional(),
@@ -224,16 +229,15 @@ export const ReplanGoalInputSchema = z.object({
 const BOOL_TRUE = new Set(["true", "1", "yes", "on"]);
 const BOOL_FALSE = new Set(["false", "0", "no", "off"]);
 
-const BOOL_FIELDS = new Set(["includeSubTasks", "flat", "hasDependencies"]);
-const INT_FIELDS = new Set(["limit", "offset", "topK", "maxDepth", "maxDescriptionLength"]);
-const FLOAT_FIELDS = new Set(["minScoreForLeaf"]);
+const BOOL_FIELDS = new Set(["includeSubTasks", "flat", "hasDependencies", "linkToLastCompleted"]);
+const INT_FIELDS = new Set(["limit", "offset", "topK", "maxDepth"]);
 const ARRAY_FIELDS = new Set(["status", "priority", "type"]);
 
 /**
  * Coerce LLM-sent string booleans / string numbers in raw tool input.
  * Returns a shallow copy with coerced values; the original is not mutated.
  *
- * Apply to tool inputs containing laxBool / laxInt / laxFloat fields (e.g.
+ * Apply to tool inputs containing laxBool / laxInt fields (e.g.
  * ListTasks, SearchTasks, ListGoals, ReplanGoal). Tools whose schemas only
  * declare uuid / string / enum inputs (e.g. GetGoal, GetTask, UpdateTask)
  * can use {@link stripNulls} alone.
@@ -283,15 +287,10 @@ export function coerceLifecycleInput<T extends Record<string, unknown>>(raw: T):
       continue;
     }
 
-    if (FLOAT_FIELDS.has(key) && typeof val === "string") {
-      const n = Number(val);
-      out[key] = Number.isFinite(n) ? n : undefined;
-      continue;
-    }
 
     // Recurse one level into decomposeOptions
     if (key === "decomposeOptions") {
-      if (val === "null" || val === null) {
+      if (val === null) {
         out[key] = undefined;
         continue;
       }

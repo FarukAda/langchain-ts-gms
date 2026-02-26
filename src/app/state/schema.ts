@@ -1,6 +1,7 @@
 import { Annotation } from "@langchain/langgraph";
 import type { Goal, Task } from "../../domain/contracts.js";
 
+/** Workflow phase indicator: tracks which stage of the GMS pipeline is active. */
 export type GmsPhase = "planning" | "executing" | "summarizing" | "replanning";
 
 /**

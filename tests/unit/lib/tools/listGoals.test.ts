@@ -12,6 +12,7 @@ function makeGoal(overrides: Partial<Goal> = {}): Goal {
     priority: "medium",
     tasks: [],
     metadata: {},
+    _version: 1,
     ...overrides,
   };
 }

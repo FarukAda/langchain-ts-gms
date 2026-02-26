@@ -19,7 +19,7 @@ export const DEFAULT_FORBIDDEN_PATTERNS: readonly string[] = [
 ];
 
 /** Default maximum task count before requiring human approval. */
-export const DEFAULT_MAX_TASK_COUNT = 10;
+export const DEFAULT_MAX_TASK_COUNT = 50;
 
 export interface GuardrailOptions {
   /** Patterns (case-insensitive substrings) that block execution. Defaults to `DEFAULT_FORBIDDEN_PATTERNS`. */
@@ -77,8 +77,9 @@ export function requiresHumanApproval(
   const max = options.maxTaskCount ?? DEFAULT_MAX_TASK_COUNT;
   const flat = preFlat ?? flattenTasks(tasks);
   if (flat.length > max) return true;
-  // Any task with critical or high risk level triggers human approval
-  return flat.some((t) => t.riskLevel === "critical" || t.riskLevel === "high");
+  // Only critical risk level triggers human approval — "high" is too common
+  // for normal action tasks (LLMs routinely assign it to implementation work)
+  return flat.some((t) => t.riskLevel === "critical");
 }
 
 /** Combined guardrail + human approval evaluation. Flattens the task tree once. */

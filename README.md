@@ -174,7 +174,15 @@ Qdrant payload indexes on `metadata.tenant_id` ensure filtered queries remain fa
 - `createGmsLifecycleToolsFromEnv(options)`: env-based lifecycle factory.
 - `createAllGmsToolsFromEnv(options)`: convenience factory for both planning + lifecycle tools with shared repository instances (recommended).
 - `createPlan(input, deps)`: execute planning directly without tool wrapper.
+- `streamPlan(input, deps)`: async generator that streams `GmsEvent` objects as the workflow progresses (planner → guardrail → summarizer).
+- `decomposeGoal(goal, repo, embeddings, chatModel, options?)`: lower-level LLM-powered task decomposition (used internally by the planner).
+- `patchPlanSubtree(repository, options)`: surgically replace a sub-tree of the task DAG without touching the rest of the plan.
 - `createGmsWorkflow(deps)`: lower-level LangGraph workflow factory.
+
+### Rate limiting
+
+- `TokenBucketLimiter`: in-process token-bucket rate limiter. Pass as `GmsToolDeps.rateLimiter` to throttle tool invocations.
+- `RateLimitError`: thrown when `TokenBucketLimiter.acquire()` times out.
 
 ### Key result shape (`gms_plan_goal`)
 
@@ -196,14 +204,14 @@ Qdrant payload indexes on `metadata.tenant_id` ensure filtered queries remain fa
 ```ts
 import {
   createGmsPlanTool,
-  GoalMemoryRepository,
+  QdrantGoalRepository,
   createEmbeddingProvider,
   CAPABILITIES_COLLECTION,
 } from "@farukada/langchain-ts-gms";
 
 const embeddings = createEmbeddingProvider();
-const goalRepository = new GoalMemoryRepository({ embeddings });
-const capabilityRepository = new GoalMemoryRepository({
+const goalRepository = new QdrantGoalRepository({ embeddings });
+const capabilityRepository = new QdrantGoalRepository({
   embeddings,
   collectionName: CAPABILITIES_COLLECTION,
 });
@@ -221,14 +229,13 @@ By default, the GMS workflow uses an **in-memory checkpointer** (`MemorySaver`) 
 import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
 import {
   createGmsWorkflow,
-  GoalMemoryRepository,
+  QdrantGoalRepository,
   createEmbeddingProvider,
-  createChatModelProvider,
 } from "@farukada/langchain-ts-gms";
 
 const checkpointer = SqliteSaver.fromConnString("./gms.db");
 const embeddings = createEmbeddingProvider();
-const goalRepository = new GoalMemoryRepository({ embeddings });
+const goalRepository = new QdrantGoalRepository({ embeddings });
 
 const workflow = createGmsWorkflow({
   goalRepository,
@@ -240,7 +247,7 @@ The `checkpointer` option is accepted by `createGmsWorkflow` (via the `WorkflowD
 
 ### Human-in-the-Loop (HITL)
 
-When a plan exceeds the guardrail task-count threshold (default: 10 tasks), the workflow triggers a LangGraph `interrupt` and returns `status: "human_approval_required"`:
+When a plan exceeds the guardrail task-count threshold (default: 50 tasks) or contains a task with `riskLevel: "critical"`, the workflow triggers a LangGraph `interrupt` and returns `status: "human_approval_required"`:
 
 ```ts
 const result = JSON.parse(await planTool.invoke({ goalDescription: "..." }));
@@ -266,13 +273,13 @@ Seed capabilities using the same `GoalMemoryRepository`:
 
 ```ts
 import {
-  GoalMemoryRepository,
+  QdrantGoalRepository,
   createEmbeddingProvider,
   CAPABILITIES_COLLECTION,
 } from "@farukada/langchain-ts-gms";
 
 const embeddings = createEmbeddingProvider();
-const capRepo = new GoalMemoryRepository({
+const capRepo = new QdrantGoalRepository({
   embeddings,
   collectionName: CAPABILITIES_COLLECTION,
 });
@@ -306,6 +313,7 @@ The package exposes granular sub-path exports for tree-shaking and targeted impo
 | `@farukada/langchain-ts-gms/types`             | `GmsToolDeps`, `GmsPlanResult`, `AllGmsTools`                 |
 | `@farukada/langchain-ts-gms/schemas/planning`  | `GmsToolInputSchema`                                          |
 | `@farukada/langchain-ts-gms/schemas/lifecycle` | All lifecycle tool input schemas                              |
+| `@farukada/langchain-ts-gms/mcp`               | `createGmsMcpServer`, `startMcpServer`, `GmsMcpServerOptions` |
 
 ### Example: import individual tools
 
@@ -334,22 +342,24 @@ import { createUpdateTaskTool } from "@farukada/langchain-ts-gms/tools/updateTas
 - `gms_validate_goal_tree`: validate hierarchy and dependency invariants.
 - `gms_get_progress`: get progress counters and completion rate.
 - `gms_replan_goal`: replan using `append`, `replace_failed`, or `replace_all`.
+- `gms_expand_task`: dynamically expand a parent task into sub-tasks at runtime (map-reduce / fan-out).
 
 ### Tool input/output reference
 
-| Tool                     | Required input     | Output focus                                               |
-| ------------------------ | ------------------ | ---------------------------------------------------------- |
-| `gms_plan_goal`          | `goalDescription`  | `goalId`, `status`, hierarchical `tasks`, `executionOrder` |
-| `gms_get_goal`           | `goalId`           | Full goal object with nested tasks                         |
-| `gms_get_task`           | `goalId`, `taskId` | Single task + `parentId` + dependency context              |
-| `gms_list_tasks`         | `goalId`           | Filtered/paginated task list + `total`                     |
-| `gms_search_tasks`       | `goalId`           | Query/filter-based paginated task results                  |
-| `gms_list_goals`         | none               | Filtered/paginated goals + `total`                         |
-| `gms_update_goal`        | `goalId`           | Updated goal status/metadata fields                        |
-| `gms_update_task`        | `goalId`, `taskId` | Updated task snapshot                                      |
-| `gms_validate_goal_tree` | `goalId`           | Invariant validation result (`valid`, `issues`)            |
-| `gms_get_progress`       | `goalId`           | Counters + completion rate                                 |
-| `gms_replan_goal`        | `goalId`           | Replan diff (`replacedTaskIds`, `newTaskIds`)              |
+| Tool                     | Required input               | Output focus                                               |
+| ------------------------ | ---------------------------- | ---------------------------------------------------------- |
+| `gms_plan_goal`          | `goalDescription`            | `goalId`, `status`, hierarchical `tasks`, `executionOrder` |
+| `gms_get_goal`           | `goalId`                     | Full goal object with nested tasks                         |
+| `gms_get_task`           | `goalId`, `taskId`           | Single task + `parentId` + dependency context              |
+| `gms_list_tasks`         | `goalId`                     | Filtered/paginated task list + `total`                     |
+| `gms_search_tasks`       | `goalId`                     | Query/filter-based paginated task results                  |
+| `gms_list_goals`         | none                         | Filtered/paginated goals + `total`                         |
+| `gms_update_goal`        | `goalId`                     | Updated goal status/metadata fields                        |
+| `gms_update_task`        | `goalId`, `taskId`           | Updated task snapshot                                      |
+| `gms_validate_goal_tree` | `goalId`                     | Invariant validation result (`valid`, `issues`)            |
+| `gms_get_progress`       | `goalId`                     | Counters + completion rate                                 |
+| `gms_replan_goal`        | `goalId`                     | Replan diff (`replacedTaskIds`, `newTaskIds`)              |
+| `gms_expand_task`        | `goalId`, `parentTaskId`, `subTasks` | Expanded task with new sub-tasks attached            |
 
 <a id="configuration-reference"></a>
 

@@ -4,6 +4,7 @@ import { getGoalOrThrow, findTaskById, findParentTaskId, wrapToolResponse } from
 import type { GmsToolDeps } from "../types.js";
 import { ErrorCodes } from "../../infra/observability/tracing.js";
 
+/** Creates the `gms_get_task` tool for retrieving a single task with parent and dependency context. */
 export const createGetTaskTool = (deps: GmsToolDeps) =>
   tool(
     async (input) => {

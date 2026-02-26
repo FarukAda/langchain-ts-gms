@@ -54,7 +54,7 @@ describe("gmsTool", () => {
     expect(parsed.executionOrder.length).toBeGreaterThan(0);
   });
 
-  it("createGmsLifecycleTools returns all 10 tools in expected order", () => {
+  it("createGmsLifecycleTools returns all 11 tools in expected order", () => {
     const { goalRepo, capRepo } = createMockRepos([]);
     const tools = createGmsLifecycleTools({
       goalRepository: goalRepo,
@@ -74,6 +74,7 @@ describe("gmsTool", () => {
       "gms_validate_goal_tree",
       "gms_get_progress",
       "gms_replan_goal",
+      "gms_expand_task",
     ]);
   });
 });

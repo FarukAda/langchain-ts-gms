@@ -1,7 +1,7 @@
 /**
  * Real LangChain Agent Integration Test
  *
- * Runs a createAgent (LangChain v1) with ChatOllama + all 11 GMS tools
+ * Runs a createAgent (LangChain v1) with ChatOllama + all 12 GMS tools
  * against live Qdrant and Ollama services. Results are enriched with Allure
  * step annotations and prompt/response attachments for rich HTML reports.
  *
@@ -236,8 +236,7 @@ function findToolResult(
   }
   return undefined;
 }
-// Available for future error-path test assertions
-void findToolResult;
+
 
 /**
  * Assert a specific tool was called, returning its call details.
@@ -371,7 +370,12 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     const sampleVec = await tempEmbed.embedQuery("test");
     await bootstrapQdrantCollections(qdrant, sampleVec.length);
 
-    const { planningTool, lifecycleTools } = await createAllGmsToolsFromEnv();
+    const { planningTool, lifecycleTools } = await createAllGmsToolsFromEnv({
+      decomposeOptions: {
+        // devstral:24b with structured output needs 3-5 min on local hardware (CPU/iGPU)
+        timeoutMs: 300_000,
+      },
+    });
     allTools = [planningTool, ...lifecycleTools];
 
     agent = createAgent({
@@ -767,9 +771,9 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
 
     expect(createdGoalId).toBeDefined();
 
-    // Use a broad, LLM-agnostic query — the substring match engine lowercases
-    // both sides, so any term from the goal description will match reliably.
-    const userPrompt = `Search for tasks in goal ${createdGoalId}. Use the gms_search_tasks tool.`;
+    // Provide a concrete query so the LLM has a clear parameter to pass
+    // instead of asking for clarification about what to search for.
+    const userPrompt = `Search for tasks in goal ${createdGoalId} with query "API". Use the gms_search_tasks tool.`;
 
     await allure.step("Send prompt to agent", async () => {
       await attachText("user_prompt", userPrompt);
@@ -830,6 +834,93 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     expect(
       typeof validateResponse!.taskCount === "number" && validateResponse!.taskCount >= 2,
       "Should report task count",
+    ).toBe(true);
+  }, 300_000);
+
+  // ── Scenario 8b: Expand a task with sub-tasks ────────────────────
+
+  it("expands a task with sub-tasks (gms_expand_task)", async () => {
+    await allure.epic("GMS Agent Integration");
+    await allure.feature("Tool: gms_expand_task");
+    await allure.severity("critical");
+
+    expect(createdGoalId, "createdGoalId must be set by S1").toBeDefined();
+    expect(createdTaskId, "createdTaskId must be set by S5").toBeDefined();
+
+    const userPrompt =
+      `Expand task ${createdTaskId} in goal ${createdGoalId} into the following sub-tasks: ` +
+      `1) "Design API schema" with expectedInputs ["requirements_doc"] and providedOutputs ["openapi_spec"], ` +
+      `2) "Implement API endpoints" with expectedInputs ["openapi_spec"] and providedOutputs ["api_server"]. ` +
+      `Use the gms_expand_task tool.`;
+
+    await allure.step("Send prompt to agent", async () => {
+      await attachText("user_prompt", userPrompt);
+    });
+
+    const { messages, content } = await invokeAgent(agent, userPrompt);
+    lastMessages = messages;
+    const toolCalls = extractToolCalls(messages);
+
+    await allure.step("Agent response", async () => {
+      await attachText("final_response", content);
+      await attachJson("tool_calls", toolCalls);
+    });
+
+    assertToolCalled(toolCalls, "gms_expand_task");
+
+    const expandResponse = findToolResponse(messages, "gms_expand_task");
+    expect(expandResponse, "gms_expand_task response must be parseable").toBeDefined();
+    expect(expandResponse!.version).toBe("1.0");
+    expect(expandResponse!.status, "Response status should be 'expanded'").toBe("expanded");
+    expect(expandResponse!.parentTaskId, "Parent task ID should match").toBe(createdTaskId);
+    expect(
+      typeof expandResponse!.addedCount === "number" && expandResponse!.addedCount >= 2,
+      "Should have added ≥2 sub-tasks",
+    ).toBe(true);
+    expect(
+      typeof expandResponse!.totalTaskCount === "number" && expandResponse!.totalTaskCount > 0,
+      "Total task count should be positive",
+    ).toBe(true);
+    expect(
+      Array.isArray(expandResponse!.executionOrder),
+      "Should include executionOrder",
+    ).toBe(true);
+  }, 300_000);
+
+  // ── Scenario 8c: Validate tree after expansion ──────────────────
+
+  it("validates goal tree after task expansion", async () => {
+    await allure.epic("GMS Agent Integration");
+    await allure.feature("Tool: gms_validate_goal_tree (post-expand)");
+
+    expect(createdGoalId).toBeDefined();
+
+    const userPrompt = `Validate the goal tree for goal ${createdGoalId}. Use the gms_validate_goal_tree tool.`;
+
+    await allure.step("Send prompt to agent", async () => {
+      await attachText("user_prompt", userPrompt);
+    });
+
+    const { messages, content } = await invokeAgent(agent, userPrompt);
+    lastMessages = messages;
+    const toolCalls = extractToolCalls(messages);
+
+    await allure.step("Agent response", async () => {
+      await attachText("final_response", content);
+      await attachJson("tool_calls", toolCalls);
+    });
+
+    assertToolCalled(toolCalls, "gms_validate_goal_tree");
+
+    const validateResponse = findToolResponse(messages, "gms_validate_goal_tree");
+    expect(validateResponse, "gms_validate_goal_tree response must be parseable").toBeDefined();
+    expect(validateResponse!.version).toBe("1.0");
+    expect(validateResponse!.valid, "Tree should remain valid after expansion").toBe(true);
+    expect(validateResponse!.issues, "Should have no issues").toEqual([]);
+    // Task count should have increased due to sub-task expansion
+    expect(
+      typeof validateResponse!.taskCount === "number" && validateResponse!.taskCount >= 4,
+      "Should have ≥4 tasks (original + sub-tasks)",
     ).toBe(true);
   }, 300_000);
 
@@ -973,14 +1064,6 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
 
     // replanGoal always persists status as "planned"
     goalStoredStatus = "planned";
-
-    // Capture a freshly-created pending task ID for S21 (fail a task)
-    if (Array.isArray(replanResponse!.newTaskIds)) {
-      const candidate = (replanResponse!.newTaskIds as string[]).find(
-        (id) => id !== createdTaskId && id !== createdGoalId,
-      );
-      if (candidate) secondTaskId = candidate;
-    }
   }, 300_000);
 
   // ── Scenario 12: Semantic goal search ─────────────────────────────
@@ -1626,7 +1709,9 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     // Step 3: in_progress → completed
     const { messages, content } = await invokeAgent(
       agent,
-      `Update goal ${createdGoalId} status to "completed". Use the gms_update_goal tool.`,
+      `Update goal ${createdGoalId} status to "completed". ` +
+        `Call the gms_update_goal tool directly with goalId and status parameters. ` +
+        `Do not call any other tool first.`,
     );
     lastMessages = messages;
     const toolCalls = extractToolCalls(messages);
@@ -1647,4 +1732,90 @@ describe.skipIf(!AGENT_TEST)(`GMS Agent Integration (model: ${CHAT_MODEL})`, () 
     // Final stored status
     goalStoredStatus = "completed";
   }, 600_000); // Up to 3 sequential agent calls on CPU-only CI
+
+  // ── Scenario 26: Invalid status transition (negative path) ──────
+
+  it("rejects an invalid goal status transition (completed → pending)", async () => {
+    await allure.epic("GMS Agent Integration");
+    await allure.feature("Negative Path: invalid transition");
+    await allure.severity("normal");
+
+    expect(createdGoalId, "createdGoalId must be set").toBeDefined();
+    // After S25, the goal is completed. Attempting completed→pending is forbidden.
+    expect(goalStoredStatus, "Goal should be completed from S25").toBe("completed");
+
+    const userPrompt =
+      `Update goal ${createdGoalId} status to "pending". ` +
+      `Use the gms_update_goal tool.`;
+
+    await allure.step("Send prompt to agent", async () => {
+      await attachText("user_prompt", userPrompt);
+    });
+
+    const { messages, content } = await invokeAgent(agent, userPrompt);
+    lastMessages = messages;
+    const toolCalls = extractToolCalls(messages);
+
+    await allure.step("Agent response", async () => {
+      await attachText("final_response", content);
+      await attachJson("tool_calls", toolCalls);
+    });
+
+    assertToolCalled(toolCalls, "gms_update_goal");
+
+    // The tool should have returned an error (INVALID_TRANSITION).
+    // handleUpdateGoal uses canTransitionTaskStatus for goal status too.
+    const toolResult = findToolResult(messages, "gms_update_goal");
+    expect(toolResult, "gms_update_goal should have been called").toBeDefined();
+    expect(
+      toolResult!.success === false,
+      `Expected tool error for completed→pending, got: ${JSON.stringify(toolResult)}`,
+    ).toBe(true);
+    if (!toolResult!.success) {
+      expect(
+        toolResult!.error.includes("INVALID_TRANSITION"),
+        `Error should contain INVALID_TRANSITION, got: ${toolResult!.error}`,
+      ).toBe(true);
+    }
+  }, 300_000);
+
+  // ── Scenario 27: Non-existent goal ID (negative path) ───────────
+
+  it("returns an error for a non-existent goal ID", async () => {
+    await allure.epic("GMS Agent Integration");
+    await allure.feature("Negative Path: goal not found");
+    await allure.severity("normal");
+
+    const fakeGoalId = "00000000-0000-4000-a000-000000000000";
+    const userPrompt = `Get the details of goal ${fakeGoalId}. Use the gms_get_goal tool.`;
+
+    await allure.step("Send prompt to agent", async () => {
+      await attachText("user_prompt", userPrompt);
+    });
+
+    const { messages, content } = await invokeAgent(agent, userPrompt);
+    lastMessages = messages;
+    const toolCalls = extractToolCalls(messages);
+
+    await allure.step("Agent response", async () => {
+      await attachText("final_response", content);
+      await attachJson("tool_calls", toolCalls);
+    });
+
+    assertToolCalled(toolCalls, "gms_get_goal");
+
+    // The tool should have returned an error (GOAL_NOT_FOUND).
+    const toolResult = findToolResult(messages, "gms_get_goal");
+    expect(toolResult, "gms_get_goal should have been called").toBeDefined();
+    expect(
+      toolResult!.success === false,
+      `Expected tool error for non-existent goal, got: ${JSON.stringify(toolResult)}`,
+    ).toBe(true);
+    if (!toolResult!.success) {
+      expect(
+        toolResult!.error.includes("GOAL_NOT_FOUND"),
+        `Error should contain GOAL_NOT_FOUND, got: ${toolResult!.error}`,
+      ).toBe(true);
+    }
+  }, 300_000);
 });

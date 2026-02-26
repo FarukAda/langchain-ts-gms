@@ -39,7 +39,7 @@ vi.mock("@qdrant/qdrant-js", () => ({
 }));
 
 // Dynamic import after mocks
-const { GoalMemoryRepository } =
+const { QdrantGoalRepository } =
   await import("../../../../src/infra/vector/goalMemoryRepository.js");
 
 function makeGoal(overrides: Partial<Goal> = {}): Goal {
@@ -50,6 +50,7 @@ function makeGoal(overrides: Partial<Goal> = {}): Goal {
     priority: "medium",
     tasks: [],
     metadata: {},
+    _version: 1,
     ...overrides,
   };
 }
@@ -66,7 +67,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
   };
 }
 
-describe("GoalMemoryRepository", () => {
+describe("QdrantGoalRepository", () => {
   const originalEnv = { ...process.env };
 
   beforeEach(() => {
@@ -77,7 +78,7 @@ describe("GoalMemoryRepository", () => {
   });
 
   it("can be instantiated", () => {
-    const repo = new GoalMemoryRepository({
+    const repo = new QdrantGoalRepository({
       embeddings: mockEmbeddings,
     });
     expect(repo).toBeDefined();
@@ -85,7 +86,7 @@ describe("GoalMemoryRepository", () => {
 
   describe("bootstrap", () => {
     it("embeds a test query to get vector size", async () => {
-      const repo = new GoalMemoryRepository({
+      const repo = new QdrantGoalRepository({
         embeddings: mockEmbeddings,
       });
       // bootstrap calls bootstrapQdrantCollections internally which requires the mock
@@ -102,7 +103,7 @@ describe("GoalMemoryRepository", () => {
 
   describe("upsert", () => {
     it("calls addDocuments with goal data", async () => {
-      const repo = new GoalMemoryRepository({
+      const repo = new QdrantGoalRepository({
         embeddings: mockEmbeddings,
       });
       const goal = makeGoal({ tasks: [makeTask()] });
@@ -118,7 +119,7 @@ describe("GoalMemoryRepository", () => {
     });
 
     it("includes tenant_id and parent_goal_id in metadata", async () => {
-      const repo = new GoalMemoryRepository({
+      const repo = new QdrantGoalRepository({
         embeddings: mockEmbeddings,
       });
       const goal = makeGoal({
@@ -146,7 +147,7 @@ describe("GoalMemoryRepository", () => {
       });
       mockSimilaritySearchWithScore.mockResolvedValue([[goalDoc, 0.95]]);
 
-      const repo = new GoalMemoryRepository({
+      const repo = new QdrantGoalRepository({
         embeddings: mockEmbeddings,
       });
       const results = await repo.search("cloud");
@@ -163,7 +164,7 @@ describe("GoalMemoryRepository", () => {
       });
       mockSimilaritySearchWithScore.mockResolvedValue([[invalidDoc, 0.5]]);
 
-      const repo = new GoalMemoryRepository({
+      const repo = new QdrantGoalRepository({
         embeddings: mockEmbeddings,
       });
       const results = await repo.search("anything");
@@ -173,7 +174,7 @@ describe("GoalMemoryRepository", () => {
     it("passes filter to qdrant", async () => {
       mockSimilaritySearchWithScore.mockResolvedValue([]);
 
-      const repo = new GoalMemoryRepository({
+      const repo = new QdrantGoalRepository({
         embeddings: mockEmbeddings,
       });
       await repo.search("test", {
@@ -208,7 +209,7 @@ describe("GoalMemoryRepository", () => {
       });
       mockSimilaritySearchVectorWithScore.mockResolvedValue([[goalDoc, 0.88]]);
 
-      const repo = new GoalMemoryRepository({
+      const repo = new QdrantGoalRepository({
         embeddings: mockEmbeddings,
       });
       const results = await repo.searchByVector(new Array(384).fill(0) as number[]);
@@ -236,7 +237,7 @@ describe("GoalMemoryRepository", () => {
         ],
       });
 
-      const repo = new GoalMemoryRepository({
+      const repo = new QdrantGoalRepository({
         embeddings: mockEmbeddings,
       });
       const goal = await repo.getById("550e8400-e29b-41d4-a716-446655440030");
@@ -249,7 +250,7 @@ describe("GoalMemoryRepository", () => {
     it("returns null when not found", async () => {
       mockScroll.mockResolvedValue({ points: [] });
 
-      const repo = new GoalMemoryRepository({
+      const repo = new QdrantGoalRepository({
         embeddings: mockEmbeddings,
       });
       const goal = await repo.getById("missing-id");
@@ -277,7 +278,7 @@ describe("GoalMemoryRepository", () => {
         ],
       });
 
-      const repo = new GoalMemoryRepository({
+      const repo = new QdrantGoalRepository({
         embeddings: mockEmbeddings,
       });
       const items = await repo.list();
@@ -306,7 +307,7 @@ describe("GoalMemoryRepository", () => {
         ],
       });
 
-      const repo = new GoalMemoryRepository({
+      const repo = new QdrantGoalRepository({
         embeddings: mockEmbeddings,
       });
       const result = await repo.listWithTotal({ limit: 10, offset: 0 });
@@ -321,7 +322,7 @@ describe("GoalMemoryRepository", () => {
       mockCount.mockResolvedValue({ count: 0 });
       mockScroll.mockResolvedValue({ points: [] });
 
-      const repo = new GoalMemoryRepository({
+      const repo = new QdrantGoalRepository({
         embeddings: mockEmbeddings,
       });
       const result = await repo.listWithTotal({ limit: 0, offset: 0 });
@@ -335,7 +336,7 @@ describe("GoalMemoryRepository", () => {
       mockCount.mockResolvedValue({ count: 0 });
       mockScroll.mockResolvedValue({ points: [] });
 
-      const repo = new GoalMemoryRepository({
+      const repo = new QdrantGoalRepository({
         embeddings: mockEmbeddings,
       });
       const result = await repo.listWithTotal({ limit: 10, offset: -5 });
@@ -374,7 +375,7 @@ describe("GoalMemoryRepository", () => {
         });
       });
 
-      const repo = new GoalMemoryRepository({
+      const repo = new QdrantGoalRepository({
         embeddings: mockEmbeddings,
       });
       const result = await repo.listWithTotal({ limit: 5, offset: 3 });
@@ -387,7 +388,7 @@ describe("GoalMemoryRepository", () => {
       mockCount.mockResolvedValue({ count: 0 });
       mockScroll.mockResolvedValue({ points: [] });
 
-      const repo = new GoalMemoryRepository({
+      const repo = new QdrantGoalRepository({
         embeddings: mockEmbeddings,
       });
       await repo.listWithTotal({
@@ -442,7 +443,7 @@ describe("GoalMemoryRepository", () => {
         ],
       });
 
-      const repo = new GoalMemoryRepository({
+      const repo = new QdrantGoalRepository({
         embeddings: mockEmbeddings,
       });
       const result = await repo.listWithTotal();
@@ -485,7 +486,7 @@ describe("GoalMemoryRepository", () => {
         ],
       });
 
-      const repo = new GoalMemoryRepository({ embeddings: mockEmbeddings });
+      const repo = new QdrantGoalRepository({ embeddings: mockEmbeddings });
       const result = await repo.listWithTotal();
       // Same timestamp → sorted alphabetically by id
       expect(result.items[0]!.id).toBe("aa0e8400-e29b-41d4-a716-446655440000");
@@ -521,7 +522,7 @@ describe("GoalMemoryRepository", () => {
         ],
       });
 
-      const repo = new GoalMemoryRepository({ embeddings: mockEmbeddings });
+      const repo = new QdrantGoalRepository({ embeddings: mockEmbeddings });
       const result = await repo.listWithTotal();
       // The second point has an invalid status that fails GoalSchema.safeParse → filtered out
       expect(result.items).toHaveLength(1);
@@ -544,7 +545,7 @@ describe("GoalMemoryRepository", () => {
       });
       mockSimilaritySearchVectorWithScore.mockResolvedValue([[doc, 0.95]]);
 
-      const repo = new GoalMemoryRepository({ embeddings: mockEmbeddings });
+      const repo = new QdrantGoalRepository({ embeddings: mockEmbeddings });
       const results = await repo.searchByVector(new Array(384).fill(0) as number[], { k: 5 });
 
       expect(results).toHaveLength(1);
@@ -571,7 +572,7 @@ describe("GoalMemoryRepository", () => {
         [invalidDoc, 0.8],
       ]);
 
-      const repo = new GoalMemoryRepository({ embeddings: mockEmbeddings });
+      const repo = new QdrantGoalRepository({ embeddings: mockEmbeddings });
       const results = await repo.searchByVector(new Array(384).fill(0) as number[]);
 
       expect(results.length).toBeLessThanOrEqual(2);
@@ -598,7 +599,7 @@ describe("GoalMemoryRepository", () => {
         ],
       });
 
-      const repo = new GoalMemoryRepository({ embeddings: mockEmbeddings });
+      const repo = new QdrantGoalRepository({ embeddings: mockEmbeddings });
       const goal = await repo.getById("550e8400-e29b-41d4-a716-446655440080");
 
       expect(goal).not.toBeNull();
@@ -609,7 +610,7 @@ describe("GoalMemoryRepository", () => {
     it("returns null when goal not found", async () => {
       mockScroll.mockResolvedValue({ points: [] });
 
-      const repo = new GoalMemoryRepository({ embeddings: mockEmbeddings });
+      const repo = new QdrantGoalRepository({ embeddings: mockEmbeddings });
       const goal = await repo.getById("nonexistent-id");
 
       expect(goal).toBeNull();
@@ -645,7 +646,7 @@ describe("GoalMemoryRepository", () => {
           ],
         });
 
-      const repo = new GoalMemoryRepository({ embeddings: mockEmbeddings });
+      const repo = new QdrantGoalRepository({ embeddings: mockEmbeddings });
       const result = await repo.listWithTotal({ limit: 2, offset: 3 });
 
       expect(result.total).toBe(5);
@@ -661,7 +662,7 @@ describe("GoalMemoryRepository", () => {
       mockCount.mockResolvedValue({ count: 0 });
       mockScroll.mockResolvedValue({ points: [] });
 
-      const repo = new GoalMemoryRepository({ embeddings: mockEmbeddings });
+      const repo = new QdrantGoalRepository({ embeddings: mockEmbeddings });
       await repo.listWithTotal({
         filter: { tenantId: "tenant-1", goalId: "goal-1" },
       });
@@ -684,7 +685,7 @@ describe("GoalMemoryRepository", () => {
 
   describe("deleteByIds", () => {
     it("calls store.delete with provided ids", async () => {
-      const repo = new GoalMemoryRepository({
+      const repo = new QdrantGoalRepository({
         embeddings: mockEmbeddings,
       });
       await repo.deleteByIds(["id-1", "id-2"]);
@@ -693,7 +694,7 @@ describe("GoalMemoryRepository", () => {
     });
 
     it("skips delete when ids array is empty", async () => {
-      const repo = new GoalMemoryRepository({
+      const repo = new QdrantGoalRepository({
         embeddings: mockEmbeddings,
       });
       await repo.deleteByIds([]);

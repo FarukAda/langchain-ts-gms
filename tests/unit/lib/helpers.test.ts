@@ -365,6 +365,7 @@ describe("helpers", () => {
         priority: "medium",
         tasks: [],
         metadata: {},
+        _version: 1,
       };
       const repo = createStaticGoalRepo(goalId, stored);
       const goal = await getGoalOrThrow(repo, goalId);
@@ -379,6 +380,7 @@ describe("helpers", () => {
         priority: "medium",
         tasks: [],
         metadata: {},
+        _version: 1,
       });
       await expect(getGoalOrThrow(repo, "550e8400-e29b-41d4-a716-446655440999")).rejects.toThrow(
         "GMS_GOAL_NOT_FOUND",

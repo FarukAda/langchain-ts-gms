@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { decomposeGoal } from "../../../../src/app/planning/decomposeGoal.js";
-import type { GoalMemoryRepository } from "../../../../src/infra/vector/goalMemoryRepository.js";
+import type { IGoalRepository } from "../../../../src/domain/ports.js";
 import { flattenTasks } from "../../../../src/domain/taskUtils.js";
 import { mockChatModel, mockEmbeddings } from "../../../helpers/mockRepository.js";
 
@@ -9,10 +9,10 @@ function mockRepo(
     goal: { id: string; description: string; status: string; priority: string; tasks: unknown[] };
     score: number;
   }>,
-): GoalMemoryRepository {
+): IGoalRepository {
   return {
     searchByVector: vi.fn().mockResolvedValue(searchResults),
-  } as unknown as GoalMemoryRepository;
+  } as unknown as IGoalRepository;
 }
 
 describe("decomposeGoal", () => {
@@ -27,6 +27,7 @@ describe("decomposeGoal", () => {
         priority: "high",
         tasks: [],
         metadata: {},
+        _version: 1,
       },
       repo,
       mockEmbeddings(),
@@ -51,6 +52,7 @@ describe("decomposeGoal", () => {
         priority: "high",
         tasks: [],
         metadata: {},
+        _version: 1,
       },
       repo,
       mockEmbeddings(),
@@ -77,6 +79,7 @@ describe("decomposeGoal", () => {
         priority: "high",
         tasks: [],
         metadata: {},
+        _version: 1,
       },
       repo,
       mockEmbeddings(),
@@ -102,6 +105,7 @@ describe("decomposeGoal", () => {
         priority: "medium",
         tasks: [],
         metadata: {},
+        _version: 1,
       },
       repo,
       mockEmbeddings(),
@@ -144,6 +148,7 @@ describe("decomposeGoal", () => {
         priority: "high",
         tasks: [],
         metadata: {},
+        _version: 1,
       },
       repo,
       mockEmbeddings(),
@@ -173,6 +178,7 @@ describe("decomposeGoal", () => {
         priority: "medium",
         tasks: [],
         metadata: {},
+        _version: 1,
       },
       repo,
       mockEmbeddings(),
@@ -197,6 +203,7 @@ describe("decomposeGoal", () => {
         priority: "high",
         tasks: [],
         metadata: {},
+        _version: 1,
         tenantId: "t-42",
       },
       repo,
@@ -234,6 +241,7 @@ describe("decomposeGoal", () => {
         priority: "high",
         tasks: [],
         metadata: {},
+        _version: 1,
       },
       repo,
       mockEmbeddings(),
@@ -274,6 +282,7 @@ describe("decomposeGoal", () => {
         priority: "medium",
         tasks: [],
         metadata: {},
+        _version: 1,
       },
       repo,
       mockEmbeddings(),
@@ -311,6 +320,7 @@ describe("decomposeGoal", () => {
         priority: "high",
         tasks: [],
         metadata: {},
+        _version: 1,
       },
       repo,
       embeddings,
@@ -359,6 +369,7 @@ describe("decomposeGoal", () => {
         priority: "high",
         tasks: [],
         metadata: {},
+        _version: 1,
       },
       mockRepo([]),
       mockEmbeddings(),
@@ -392,6 +403,7 @@ describe("decomposeGoal", () => {
         priority: "medium",
         tasks: [],
         metadata: {},
+        _version: 1,
       },
       repo,
       embeddings,

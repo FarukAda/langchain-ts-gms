@@ -1,41 +1,80 @@
 import { tool } from "@langchain/core/tools";
 import { UpdateTaskInputSchema } from "../schemas/lifecycleSchemas.js";
-import { getGoalOrThrow, findTaskById, stripNulls, wrapToolResponse } from "../helpers.js";
+import { stripNulls, wrapToolResponse } from "../helpers.js";
 import type { GmsToolDeps } from "../types.js";
-import type { Goal } from "../../domain/contracts.js";
-import { updateTaskById, canTransitionTaskStatus } from "../../domain/taskUtils.js";
-import { ErrorCodes } from "../../infra/observability/tracing.js";
+import type { Goal, Task } from "../../domain/contracts.js";
+import { flattenTasks } from "../../domain/taskUtils.js";
+import { logWarn } from "../../infra/observability/tracing.js";
+import { handleUpdateTask } from "../handlers/updateHandlers.js";
 
+/**
+ * Check if a task is "ready" — status is pending and all dependencies
+ * have been completed (or it has no dependencies).
+ *
+ * Shared by both the LangChain tool and the MCP server.
+ */
+export function isTaskReady(task: Task, allTasks: Task[]): boolean {
+  if (task.status !== "pending") return false;
+  if (task.dependencies.length === 0) return true;
+  return task.dependencies.every((depId) => {
+    const dep = allTasks.find((t) => t.id === depId);
+    return dep?.status === "completed";
+  });
+}
+
+/**
+ * Fire lifecycle hooks after a status-changing update.
+ * All hook errors are caught and logged — they must never crash the tool.
+ *
+ * @param prevReadyIds - tasks that were already ready BEFORE the update (excluded from onTaskReady)
+ */
+export async function fireLifecycleHooks(
+  deps: GmsToolDeps,
+  updated: Goal,
+  prevReadyIds: ReadonlySet<string>,
+): Promise<void> {
+  const flat = flattenTasks(updated.tasks);
+
+  // onTaskReady: fire only for tasks that became NEWLY ready (not previously ready)
+  if (deps.onTaskReady) {
+    const readyTasks = flat.filter((t) => isTaskReady(t, flat) && !prevReadyIds.has(t.id));
+    for (const ready of readyTasks) {
+      try {
+        await deps.onTaskReady(ready, updated);
+      } catch (err) {
+        logWarn("onTaskReady hook error (non-fatal)", {
+          taskId: ready.id,
+          goalId: updated.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+  }
+
+  // onGoalCompleted: fire when every task in the tree is completed
+  if (deps.onGoalCompleted) {
+    const allCompleted = flat.length > 0 && flat.every((t) => t.status === "completed");
+    if (allCompleted) {
+      try {
+        await deps.onGoalCompleted(updated);
+      } catch (err) {
+        logWarn("onGoalCompleted hook error (non-fatal)", {
+          goalId: updated.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+  }
+}
+
+/** Creates the `gms_update_task` tool for updating a task's status, result, or error with lifecycle hooks. */
 export const createUpdateTaskTool = (deps: GmsToolDeps) =>
   tool(
     async (rawInput) => {
+      if (deps.rateLimiter) await deps.rateLimiter.acquire();
       const input = stripNulls(rawInput);
-      const goal = await getGoalOrThrow(deps.goalRepository, input.goalId);
-      const existing = findTaskById(goal.tasks, input.taskId);
-      if (!existing)
-        throw new Error(
-          `[${ErrorCodes.TASK_NOT_FOUND}] Task not found in goal ${input.goalId}: ${input.taskId}`,
-        );
-      if (input.status !== undefined && !canTransitionTaskStatus(existing.status, input.status)) {
-        throw new Error(
-          `[${ErrorCodes.INVALID_TRANSITION}] Invalid status transition for ${input.taskId}: ${existing.status} -> ${input.status}`,
-        );
-      }
-
-      const tasks = updateTaskById(goal.tasks, input.taskId, (t) => ({
-        ...t,
-        ...(input.status !== undefined && { status: input.status }),
-        ...(input.result !== undefined && { result: input.result }),
-        ...(input.error !== undefined && { error: input.error }),
-      }));
-      const updated: Goal = {
-        ...goal,
-        tasks,
-        updatedAt: new Date().toISOString(),
-      };
-      await deps.goalRepository.upsert(updated);
-      const task = findTaskById(tasks, input.taskId);
-      return wrapToolResponse({ goalId: updated.id, task });
+      const result = await handleUpdateTask(deps, input);
+      return wrapToolResponse(result);
     },
     {
       name: "gms_update_task",

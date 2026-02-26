@@ -4,6 +4,7 @@ import { getGoalOrThrow, wrapToolResponse } from "../helpers.js";
 import type { GmsToolDeps } from "../types.js";
 import { flattenTasks, validateGoalInvariants } from "../../domain/taskUtils.js";
 
+/** Creates the `gms_validate_goal_tree` tool for checking structural integrity, cycles, and dependency validity. */
 export const createValidateGoalTreeTool = (deps: GmsToolDeps) =>
   tool(
     async (input) => {
@@ -13,6 +14,7 @@ export const createValidateGoalTreeTool = (deps: GmsToolDeps) =>
         goalId: goal.id,
         valid: result.valid,
         issues: result.issues,
+        warnings: result.warnings,
         taskCount: flattenTasks(goal.tasks).length,
       });
     },

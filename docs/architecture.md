@@ -71,7 +71,7 @@ The library exposes one planning tool and a full lifecycle toolset for agent-sid
 
 - Plan: `gms_plan_goal`
 - Retrieval: `gms_get_goal`, `gms_list_goals`, `gms_get_task`, `gms_list_tasks`, `gms_search_tasks`
-- Mutation: `gms_update_goal`, `gms_update_task`
+- Mutation: `gms_update_goal`, `gms_update_task`, `gms_expand_task`
 - Control: `gms_validate_goal_tree`, `gms_get_progress`, `gms_replan_goal`
 
 This enables end-to-end goal management without moving execution logic into GMS.
@@ -102,7 +102,7 @@ flowchart TD
 flowchart LR
     plan[gms_plan_goal]
     retrieve["gms_get_goal, gms_get_task, gms_list_tasks, gms_search_tasks, gms_list_goals"]
-    mutate["gms_update_goal, gms_update_task"]
+    mutate["gms_update_goal, gms_update_task, gms_expand_task"]
     control["gms_validate_goal_tree, gms_get_progress, gms_replan_goal"]
 
     plan --> retrieve

@@ -3,6 +3,7 @@ import { GetGoalInputSchema } from "../schemas/lifecycleSchemas.js";
 import { getGoalOrThrow, wrapToolResponse } from "../helpers.js";
 import type { GmsToolDeps } from "../types.js";
 
+/** Creates the `gms_get_goal` tool for retrieving a goal and its full task tree by ID. */
 export const createGetGoalTool = (deps: GmsToolDeps) =>
   tool(
     async (input) => {

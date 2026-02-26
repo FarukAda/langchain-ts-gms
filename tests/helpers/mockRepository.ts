@@ -6,8 +6,9 @@
 import { vi } from "vitest";
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import type { GoalMemoryRepository } from "../../src/infra/vector/goalMemoryRepository.js";
+import type { IGoalRepository } from "../../src/domain/ports.js";
 import type { Goal, Task } from "../../src/domain/contracts.js";
+import { ConcurrentModificationError } from "../../src/domain/errors.js";
 
 /** Default embedding dimension matching the test vector size. */
 export const TEST_VEC_DIM = 384;
@@ -58,7 +59,16 @@ export function createMockRepos(
 
   const goalRepo = {
     bootstrap: vi.fn().mockResolvedValue(undefined),
-    upsert: vi.fn().mockImplementation((g: Goal) => {
+    upsert: vi.fn().mockImplementation((g: Goal, expectedVersion?: number) => {
+      if (expectedVersion !== undefined) {
+        const existing = stored.get(g.id);
+        const storedVersion = existing?._version ?? 1;
+        if (storedVersion !== expectedVersion) {
+          return Promise.reject(new ConcurrentModificationError(g.id, expectedVersion));
+        }
+        stored.set(g.id, { ...g, _version: expectedVersion + 1, updatedAt: new Date().toISOString() });
+        return Promise.resolve();
+      }
       stored.set(g.id, { ...g, updatedAt: new Date().toISOString() });
       return Promise.resolve();
     }),
@@ -73,12 +83,12 @@ export function createMockRepos(
       return Promise.resolve({ items, total: items.length, limit: 50, offset: 0 });
     }),
     deleteByIds: vi.fn(),
-  } as unknown as GoalMemoryRepository;
+  } as unknown as IGoalRepository;
 
   const capRepo = {
     ...goalRepo,
     searchByVector: vi.fn().mockResolvedValue(searchResults),
-  } as unknown as GoalMemoryRepository;
+  } as unknown as IGoalRepository;
 
   return { goalRepo, capRepo, stored };
 }
@@ -90,10 +100,18 @@ export function createMockRepos(
  * This is the pattern used by the lifecycle tool tests where a pre-built
  * goal is supplied and mutated in place.
  */
-export function createStaticGoalRepo(goalId: string, stored: Goal): GoalMemoryRepository {
+export function createStaticGoalRepo(goalId: string, stored: Goal): IGoalRepository {
   return {
     bootstrap: vi.fn().mockResolvedValue(undefined),
-    upsert: vi.fn().mockImplementation((g: Goal) => {
+    upsert: vi.fn().mockImplementation((g: Goal, expectedVersion?: number) => {
+      if (expectedVersion !== undefined) {
+        const storedVersion = stored._version ?? 1;
+        if (storedVersion !== expectedVersion) {
+          return Promise.reject(new ConcurrentModificationError(g.id, expectedVersion));
+        }
+        Object.assign(stored, g, { _version: expectedVersion + 1 });
+        return Promise.resolve();
+      }
       Object.assign(stored, g);
       return Promise.resolve();
     }),
@@ -105,7 +123,7 @@ export function createStaticGoalRepo(goalId: string, stored: Goal): GoalMemoryRe
     list: vi.fn().mockResolvedValue([stored]),
     listWithTotal: vi.fn().mockResolvedValue({ items: [stored], total: 1, limit: 10, offset: 0 }),
     deleteByIds: vi.fn(),
-  } as unknown as GoalMemoryRepository;
+  } as unknown as IGoalRepository;
 }
 
 /**
@@ -214,6 +232,7 @@ export function makeGoal(overrides: Partial<Goal> = {}): Goal {
     priority: "medium",
     tasks: [],
     metadata: {},
+    _version: 1,
     ...overrides,
   };
 }

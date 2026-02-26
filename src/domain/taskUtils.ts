@@ -92,6 +92,15 @@ export function migrateTasksToHierarchy(raw: unknown): Task[] {
         estimatedComplexity: t.estimatedComplexity as Complexity,
       }),
       ...(t.rationale !== undefined && { rationale: t.rationale as string }),
+      ...(t.customFields !== undefined && {
+        customFields: t.customFields as Record<string, unknown>,
+      }),
+      ...(t.expectedInputs !== undefined && {
+        expectedInputs: t.expectedInputs as string[],
+      }),
+      ...(t.providedOutputs !== undefined && {
+        providedOutputs: t.providedOutputs as string[],
+      }),
     } satisfies Task;
   });
 }
@@ -128,6 +137,8 @@ export function canTransitionTaskStatus(current: TaskStatus, next: TaskStatus): 
 export interface GoalInvariantResult {
   valid: boolean;
   issues: string[];
+  /** Informational warnings (e.g. I/O mapping gaps) that don't affect structural validity. */
+  warnings: string[];
 }
 
 /**
@@ -184,5 +195,26 @@ export function validateGoalInvariants(goal: Goal): GoalInvariantResult {
     issues.push(`Dependency cycles detected near: ${Array.from(new Set(cycles)).join(", ")}`);
   }
 
-  return { valid: issues.length === 0, issues };
+  // --- I/O mapping validation (warnings, not hard failures) ---
+  // LLM-generated plans may not perfectly pair expectedInputs/providedOutputs.
+  const warnings: string[] = [];
+  for (const t of flat) {
+    if (!t.expectedInputs?.length) continue;
+    const available = new Set<string>();
+    for (const dep of t.dependencies) {
+      const depTask = byId.get(dep);
+      if (depTask?.providedOutputs) {
+        for (const out of depTask.providedOutputs) available.add(out);
+      }
+    }
+    for (const input of t.expectedInputs) {
+      if (!available.has(input)) {
+        warnings.push(
+          `Task ${t.id} expects input "${input}" but no direct dependency provides it`,
+        );
+      }
+    }
+  }
+
+  return { valid: issues.length === 0, issues, warnings };
 }

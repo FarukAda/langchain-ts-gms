@@ -24,7 +24,7 @@ interface ReplanResult {
   replacedTaskIds: string[];
   newTaskIds: string[];
   totalTasks: number;
-  tasks: Array<{ id: string; description: string; status: string }>;
+  tasks: Array<{ id: string; description: string; status: string; dependencies?: string[] }>;
 }
 
 describe("createReplanGoalTool", () => {
@@ -105,5 +105,28 @@ describe("createReplanGoalTool", () => {
       decomposeOptions: { topK: 1, maxDepth: 0 },
     });
     await expect(tool.invoke({ goalId: GOAL_ID })).rejects.toThrow("MISSING_DEPENDENCY");
+  });
+
+  it("links first new task to last completed task with linkToLastCompleted", async () => {
+    const completedId = crypto.randomUUID();
+    const pendingId = crypto.randomUUID();
+    const existing = [
+      makeTask({ id: completedId, status: "completed" }),
+      makeTask({ id: pendingId, status: "pending" }),
+    ];
+    const goal = baseGoal(existing);
+    const tool = createReplanGoalTool(createToolDeps(GOAL_ID, goal));
+    const raw = await tool.invoke({
+      goalId: GOAL_ID,
+      strategy: "append",
+      linkToLastCompleted: true,
+    });
+    const result = JSON.parse(raw) as ReplanResult;
+    expect(result.replanStrategy).toBe("append");
+    // The first new task should depend on the completed task
+    const newTasks = result.tasks.filter((t) => result.newTaskIds.includes(t.id));
+    expect(newTasks.length).toBeGreaterThan(0);
+    const firstNew = newTasks[0]!;
+    expect(firstNew.dependencies).toContain(completedId);
   });
 });

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { resetEnv } from "../../../src/config/env.js";
-import type { GoalMemoryRepository } from "../../../src/infra/vector/goalMemoryRepository.js";
+import type { IGoalRepository } from "../../../src/domain/ports.js";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import type { GmsToolDeps } from "../../../src/lib/types.js";
 
@@ -21,6 +21,7 @@ class MockGoalMemoryRepository {
 }
 
 vi.mock("../../../src/infra/vector/goalMemoryRepository.js", () => ({
+  QdrantGoalRepository: MockGoalMemoryRepository,
   GoalMemoryRepository: MockGoalMemoryRepository,
 }));
 
@@ -106,7 +107,7 @@ describe("gmsTool env factories", () => {
   describe("createGmsLifecycleToolsFromEnv", () => {
     it("returns 10 lifecycle tools", async () => {
       const tools = await createGmsLifecycleToolsFromEnv({ bootstrap: false });
-      expect(tools).toHaveLength(10);
+      expect(tools).toHaveLength(11);
       expect(tools.map((t) => t.name)).toEqual([
         "gms_get_goal",
         "gms_get_task",
@@ -118,6 +119,7 @@ describe("gmsTool env factories", () => {
         "gms_validate_goal_tree",
         "gms_get_progress",
         "gms_replan_goal",
+        "gms_expand_task",
       ]);
     });
   });
@@ -127,7 +129,7 @@ describe("gmsTool env factories", () => {
       const result = await createAllGmsToolsFromEnv({ bootstrap: false });
       expect(result.planningTool).toBeDefined();
       expect(result.planningTool.name).toBe("gms_plan_goal");
-      expect(result.lifecycleTools).toHaveLength(10);
+      expect(result.lifecycleTools).toHaveLength(11);
     });
 
     it("passes decomposeOptions through to tool deps", async () => {
@@ -142,11 +144,11 @@ describe("gmsTool env factories", () => {
   describe("createGmsLifecycleTools (non-env)", () => {
     it("creates tools from provided deps", () => {
       const mockDeps = {
-        goalRepository: new MockGoalMemoryRepository() as unknown as GoalMemoryRepository,
+        goalRepository: new MockGoalMemoryRepository() as unknown as IGoalRepository,
         chatModel: { _type: "mock" } as unknown as BaseChatModel,
       };
       const tools = createGmsLifecycleTools(mockDeps as GmsToolDeps);
-      expect(tools).toHaveLength(10);
+      expect(tools).toHaveLength(11);
     });
   });
 });

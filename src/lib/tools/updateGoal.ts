@@ -1,14 +1,15 @@
 import { tool } from "@langchain/core/tools";
 import { UpdateGoalInputSchema } from "../schemas/lifecycleSchemas.js";
-import { getGoalOrThrow, stripNulls, wrapToolResponse } from "../helpers.js";
+import { stripNulls, wrapToolResponse } from "../helpers.js";
 import type { GmsToolDeps } from "../types.js";
-import type { Goal } from "../../domain/contracts.js";
-import { canTransitionTaskStatus } from "../../domain/taskUtils.js";
-import { ErrorCodes } from "../../infra/observability/tracing.js";
+import { handleUpdateGoal } from "../handlers/updateHandlers.js";
+import { logWarn } from "../../infra/observability/tracing.js";
 
+/** Creates the `gms_update_goal` tool for updating a goal's description, status, priority, or metadata. */
 export const createUpdateGoalTool = (deps: GmsToolDeps) =>
   tool(
     async (rawInput) => {
+      if (deps.rateLimiter) await deps.rateLimiter.acquire();
       const input = stripNulls(rawInput);
       // Small LLMs sometimes pass metadata as a JSON string — coerce to object
       let parsedMeta: Record<string, unknown> | undefined;
@@ -16,39 +17,16 @@ export const createUpdateGoalTool = (deps: GmsToolDeps) =>
         try {
           parsedMeta = JSON.parse(input.metadata) as Record<string, unknown>;
         } catch {
-          /* ignore unparseable */
+          logWarn("Failed to parse metadata JSON string — metadata ignored", {
+            goalId: rawInput.goalId,
+          });
         }
       } else if (typeof input.metadata === "object" && input.metadata !== null) {
         parsedMeta = input.metadata;
       }
-      const goal = await getGoalOrThrow(deps.goalRepository, input.goalId);
-      if (input.status !== undefined && !canTransitionTaskStatus(goal.status, input.status)) {
-        throw new Error(
-          `[${ErrorCodes.INVALID_TRANSITION}] Invalid goal status transition: ${goal.status} -> ${input.status}`,
-        );
-      }
-      if (input.description !== undefined && input.description.trim().length === 0) {
-        throw new Error(
-          `[${ErrorCodes.INVALID_INPUT}] Goal description cannot be empty or whitespace-only`,
-        );
-      }
-      const updated: Goal = {
-        ...goal,
-        ...(input.description !== undefined && { description: input.description }),
-        ...(input.status !== undefined && { status: input.status }),
-        ...(input.priority !== undefined && { priority: input.priority }),
-        ...(input.tenantId !== undefined && { tenantId: input.tenantId }),
-        ...(parsedMeta !== undefined && {
-          metadata: { ...(goal.metadata ?? {}), ...parsedMeta },
-        }),
-        updatedAt: new Date().toISOString(),
-      };
-      await deps.goalRepository.upsert(updated);
-      return wrapToolResponse({
-        goalId: updated.id,
-        status: updated.status,
-        updatedAt: updated.updatedAt,
-      });
+      const { metadata: _rawMeta, ...rest } = input;
+      const result = await handleUpdateGoal(deps, rest, parsedMeta);
+      return wrapToolResponse(result);
     },
     {
       name: "gms_update_goal",

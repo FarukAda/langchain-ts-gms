@@ -30,9 +30,10 @@ import { createListTasksTool } from "./tools/listTasks.js";
 import { createSearchTasksTool } from "./tools/searchTasks.js";
 import { createListGoalsTool } from "./tools/listGoals.js";
 import { createReplanGoalTool } from "./tools/replanGoal.js";
+import { createExpandTaskTool } from "./tools/expandTask.js";
 import { createEmbeddingProvider } from "../infra/embeddings/embeddingProvider.js";
 import { createChatModelProvider } from "../infra/chat/chatModelProvider.js";
-import { GoalMemoryRepository } from "../infra/vector/goalMemoryRepository.js";
+import { QdrantGoalRepository } from "../infra/vector/goalMemoryRepository.js";
 import { CAPABILITIES_COLLECTION } from "../infra/vector/qdrantClient.js";
 
 // ── Backward-compatible composite factories ──────────────────────────
@@ -54,14 +55,15 @@ export function createGmsLifecycleTools(deps: GmsToolDeps): StructuredToolInterf
     createValidateGoalTreeTool(deps),
     createGetProgressTool(deps),
     createReplanGoalTool(deps),
+    createExpandTaskTool(deps),
   ];
 }
 
 /** Build env-driven deps (embeddings + repos), optionally bootstrapping. */
 async function buildEnvDeps(options: CreateGmsToolFromEnvOptions = {}): Promise<GmsToolDeps> {
   const embeddings = createEmbeddingProvider();
-  const goalRepository = new GoalMemoryRepository({ embeddings });
-  const capabilityRepository = new GoalMemoryRepository({
+  const goalRepository = new QdrantGoalRepository({ embeddings });
+  const capabilityRepository = new QdrantGoalRepository({
     embeddings,
     collectionName: CAPABILITIES_COLLECTION,
   });
@@ -75,6 +77,7 @@ async function buildEnvDeps(options: CreateGmsToolFromEnvOptions = {}): Promise<
     ...(options.decomposeOptions !== undefined && { decomposeOptions: options.decomposeOptions }),
     ...(options.toolName !== undefined && { toolName: options.toolName }),
     ...(options.toolDescription !== undefined && { toolDescription: options.toolDescription }),
+    ...(options.checkpointer !== undefined && { checkpointer: options.checkpointer }),
   };
 }
 

@@ -25,6 +25,7 @@ export function setLogWriter(writer: (json: string) => void): void {
 
 /** When true, all structured logging is suppressed (useful in tests). */
 let _silent = false;
+/** Suppress all structured logging output (useful for silencing logs in tests). */
 export function setLogSilent(value: boolean): void {
   _silent = value;
 }
@@ -71,22 +72,27 @@ export function log(level: StructuredLog["level"], msg: string, context: LogCont
   _writer(JSON.stringify(entry));
 }
 
+/** Emit a structured info-level log entry. */
 export function logInfo(msg: string, context?: LogContext): void {
   log("info", msg, context);
 }
 
+/** Emit a structured warning-level log entry. */
 export function logWarn(msg: string, context?: LogContext): void {
   log("warn", msg, context);
 }
 
+/** Emit a structured error-level log entry. */
 export function logError(msg: string, context?: LogContext): void {
   log("error", msg, context);
 }
 
+/** Emit a structured debug-level log entry. */
 export function logDebug(msg: string, context?: LogContext): void {
   log("debug", msg, context);
 }
 
+/** Canonical error codes used across GMS for structured error identification. */
 export const ErrorCodes = {
   GOAL_NOT_FOUND: "GMS_GOAL_NOT_FOUND",
   TASK_NOT_FOUND: "GMS_TASK_NOT_FOUND",
@@ -95,6 +101,9 @@ export const ErrorCodes = {
   INVARIANT_VIOLATION: "GMS_INVARIANT_VIOLATION",
   INFRA_RETRIABLE: "GMS_INFRA_RETRIABLE",
   MISSING_DEPENDENCY: "GMS_MISSING_DEPENDENCY",
+  CONCURRENT_MODIFICATION: "GMS_CONCURRENT_MODIFICATION",
+  GUARDRAIL_BLOCKED: "GMS_GUARDRAIL_BLOCKED",
+  RATE_LIMIT_EXCEEDED: "GMS_RATE_LIMIT_EXCEEDED",
 } as const;
 
 export async function withNodeTiming<T>(

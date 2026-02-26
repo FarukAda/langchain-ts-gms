@@ -1,19 +1,40 @@
 import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import type { StructuredToolInterface } from "@langchain/core/tools";
+import type { BaseCheckpointSaver } from "@langchain/langgraph";
 import type { DecomposeOptions } from "../app/planning/decomposeGoal.js";
-import type { GoalMemoryRepository } from "../infra/vector/goalMemoryRepository.js";
+import type { IGoalRepository } from "../domain/ports.js";
 import type { Goal, Task } from "../domain/contracts.js";
+import type { TokenBucketLimiter } from "./rateLimiter.js";
 
 /** Dependency contract for creating planning and lifecycle tools. */
 export interface GmsToolDeps {
-  goalRepository: GoalMemoryRepository;
-  capabilityRepository?: GoalMemoryRepository;
+  goalRepository: IGoalRepository;
+  capabilityRepository?: IGoalRepository;
   embeddings?: EmbeddingsInterface;
   chatModel: BaseChatModel;
   decomposeOptions?: DecomposeOptions;
   toolName?: string;
   toolDescription?: string;
+  /**
+   * Optional rate limiter for throttling tool invocations.
+   * When provided, each tool call acquires a token before executing.
+   */
+  rateLimiter?: TokenBucketLimiter;
+  /**
+   * LangGraph checkpointer for durable workflow state.
+   * Defaults to in-memory `MemorySaver` (not for production).
+   * For production, pass `@langchain/langgraph-checkpoint-sqlite` or
+   * `@langchain/langgraph-checkpoint-postgres`.
+   */
+  checkpointer?: BaseCheckpointSaver;
+  // --- Execution hooks (Feature 7) ---
+  /** Fired when a task becomes ready (all dependencies completed). */
+  onTaskReady?: (task: Task, goal: Goal) => void | Promise<void>;
+  /** Fired when a plan requires human approval before execution. */
+  onPlanRequiresApproval?: (goal: Goal) => void | Promise<void>;
+  /** Fired when all tasks in a goal are completed. */
+  onGoalCompleted?: (goal: Goal) => void | Promise<void>;
 }
 
 /** Env-based factory options used by `createGmsToolFromEnv` and lifecycle variant. */
@@ -22,6 +43,12 @@ export interface CreateGmsToolFromEnvOptions {
   bootstrap?: boolean;
   toolName?: string;
   toolDescription?: string;
+  /**
+   * LangGraph checkpointer for durable workflow state.
+   * When omitted, defaults to in-memory `MemorySaver`.
+   * @see {@link GmsToolDeps.checkpointer}
+   */
+  checkpointer?: BaseCheckpointSaver;
 }
 
 import type { z } from "zod/v4";
